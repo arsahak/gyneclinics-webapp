@@ -1,0 +1,109 @@
+import { addDays, addHours } from "date-fns";
+import { slotsFor, type DoctorSchedule } from "@/lib/availability";
+import type { RegionId } from "@/lib/locale/regions";
+import type { Availability, Consultation, PaymentMethodId } from "@/lib/types";
+
+/**
+ * One rule keeps messaging simple: chatting with a doctor is a consultation.
+ * Patients book (and pay, unless the fee is 0), the chat opens for the session,
+ * then stays open for free follow-up on the same concern before closing.
+ */
+export const CONSULTATION_POLICY = {
+  /** Chat is fully open for this long after the consultation starts. */
+  sessionHours: 24,
+  /** Free follow-up messages on the same concern after the session. */
+  followUpDays: 7,
+  /** Full refund if the doctor hasn't replied within this time. */
+  replyGuaranteeHours: 12,
+  /** A selected slot is held for this long while the patient pays. */
+  slotHoldMinutes: 10,
+};
+
+export type ConsultationState = "upcoming" | "active" | "follow_up" | "closed" | "refunded";
+
+export interface ConsultationTimeline {
+  state: ConsultationState;
+  startsAt: Date;
+  sessionEndsAt: Date;
+  followUpEndsAt: Date;
+}
+
+export function timeline(c: Consultation, now: Date): ConsultationTimeline {
+  const startsAt = new Date(c.startsAt);
+  const sessionEndsAt = c.completedAt
+    ? new Date(c.completedAt)
+    : addHours(startsAt, CONSULTATION_POLICY.sessionHours);
+  const followUpEndsAt = addDays(sessionEndsAt, CONSULTATION_POLICY.followUpDays);
+
+  let state: ConsultationState;
+  if (c.refundedAt) state = "refunded";
+  else if (now < startsAt) state = "upcoming";
+  else if (now < sessionEndsAt) state = "active";
+  else if (now < followUpEndsAt) state = "follow_up";
+  else state = "closed";
+
+  return { state, startsAt, sessionEndsAt, followUpEndsAt };
+}
+
+/** Patients can message only during an active session or the free follow-up window. */
+export function canMessage(state: ConsultationState) {
+  return state === "active" || state === "follow_up";
+}
+
+export const STATE_LABEL: Record<ConsultationState, { label: string; tone: "primary" | "success" | "gold" | "neutral" | "danger" }> = {
+  upcoming: { label: "Upcoming", tone: "primary" },
+  active: { label: "In progress", tone: "success" },
+  follow_up: { label: "Free follow-up", tone: "gold" },
+  closed: { label: "Completed", tone: "neutral" },
+  refunded: { label: "Refunded", tone: "danger" },
+};
+
+/** Instant chat is offered only when the doctor is online now and accepts it in their schedule. */
+export function canStartInstantly(availability: Availability, schedule: DoctorSchedule) {
+  return availability === "online" && schedule.instantChat;
+}
+
+export interface PaymentMethod {
+  id: PaymentMethodId;
+  label: string;
+  description: string;
+}
+
+const LOCAL_METHODS: Partial<Record<RegionId, string>> = {
+  south_asia: "bKash, Nagad, UPI and other local wallets",
+  africa: "M-Pesa and mobile money",
+  latin_america: "PIX and local bank transfer",
+  middle_east: "Local cards and bank transfer",
+};
+
+/** Payment options shown per region. The real gateway is chosen by the backend. */
+export function paymentMethodsFor(regionId: RegionId): PaymentMethod[] {
+  const methods: PaymentMethod[] = [
+    { id: "card", label: "Credit or debit card", description: "Visa, Mastercard, Amex" },
+    { id: "wallet", label: "Apple Pay / Google Pay", description: "Pay with your phone" },
+  ];
+  const local = LOCAL_METHODS[regionId];
+  if (local) methods.splice(1, 0, { id: "local", label: "Local payment", description: local });
+  return methods;
+}
+
+/** Local payment providers offered per region (dummy until the gateway is connected). */
+export const LOCAL_PROVIDERS: Partial<Record<RegionId, string[]>> = {
+  south_asia: ["bKash", "Nagad", "Rocket", "UPI"],
+  africa: ["M-Pesa", "MTN MoMo", "Airtel Money"],
+  latin_america: ["PIX", "Mercado Pago"],
+  middle_east: ["Benefit Pay", "STC Pay", "Bank transfer"],
+};
+
+/** Re-checks a slot against the doctor's schedule right before payment. */
+export function isSlotStillAvailable(
+  doctorId: string,
+  schedule: DoctorSchedule,
+  slot: Date,
+  now: Date,
+  bookedStarts: string[],
+) {
+  return slotsFor(doctorId, schedule, now, bookedStarts).some((day) =>
+    day.slots.some((s) => s.available && s.start.getTime() === slot.getTime()),
+  );
+}

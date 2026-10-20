@@ -1,26 +1,302 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/* Dark mode follows the data-theme attribute set on <html> (light is the default). */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+/* A calm, cool palette: mineral teal, softened plum, rose and deep slate ink. */
+:root,
+[data-theme="light"] {
+  color-scheme: light;
+  --background: #f7fafb;
+  --surface: #ffffff;
+  --surface-2: #f1f6f7;
+  --foreground: #12334b;
+  --muted-foreground: #607586;
+  --border: #dce7e9;
+
+  --primary: #2b7d85;
+  --primary-hover: #21666e;
+  --primary-foreground: #ffffff;
+  --primary-soft: #e6f4f3;
+
+  --secondary: #765885;
+  --secondary-foreground: #ffffff;
+  --secondary-soft: #f4eef7;
+
+  --accent: #cc619d;
+  --accent-foreground: #ffffff;
+  --accent-soft: #fbeef5;
+
+  --gold: #af8d53;
+  --gold-soft: #f7f1e6;
+
+  /* Brand bar (landing navbar) — always paired with white text. */
+  --nav: #173f57;
+
+  --success: #15803d;
+  --success-soft: #e9f8ee;
+  --warning: #b45309;
+  --warning-soft: #fdf5e6;
+  --danger: #c2263b;
+  --danger-soft: #fdecee;
+
+  /* Cycle phase colours */
+  --phase-period: #cc619d;
+  --phase-fertile: #3d9ca0;
+  --phase-ovulation: #765885;
+  --phase-predicted: #ebb6d1;
+
+  --shadow-color: 25 66 84;
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+  --background: #091722;
+  --surface: #10232e;
+  --surface-2: #18333d;
+  --foreground: #e7f0f2;
+  --muted-foreground: #9bb0b8;
+  --border: #29444e;
+
+  --primary: #62bcc0;
+  --primary-hover: #83d0d2;
+  --primary-foreground: #04161a;
+  --primary-soft: #11343a;
+
+  --secondary: #c9a7d0;
+  --secondary-foreground: #1e0d22;
+  --secondary-soft: #302238;
+
+  --accent: #ed8bbb;
+  --accent-foreground: #2a0718;
+  --accent-soft: #401d35;
+
+  --gold: #d4b26e;
+  --gold-soft: #2c2412;
+
+  --nav: #123d4e;
+
+  --success: #4ade80;
+  --success-soft: #0f2a1b;
+  --warning: #fbbf24;
+  --warning-soft: #2d2410;
+  --danger: #f87171;
+  --danger-soft: #331418;
+
+  --phase-period: #f07bbd;
+  --phase-fertile: #3fb3b9;
+  --phase-ovulation: #c79ad3;
+  --phase-predicted: #6b3557;
+
+  --shadow-color: 0 0 0;
 }
 
 @theme inline {
   --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-soft: var(--primary-soft);
+
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary-soft: var(--secondary-soft);
+
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent-soft: var(--accent-soft);
+
+  --color-gold: var(--gold);
+  --color-gold-soft: var(--gold-soft);
+  --color-nav: var(--nav);
+
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+
+  --color-phase-period: var(--phase-period);
+  --color-phase-fertile: var(--phase-fertile);
+  --color-phase-ovulation: var(--phase-ovulation);
+  --color-phase-predicted: var(--phase-predicted);
+
+  /* Poppins everywhere; `font-serif` headings use it too so the app has one family. */
+  --font-sans: var(--font-poppins);
+  --font-mono: var(--font-geist-mono);
+  --font-serif: var(--font-poppins);
+
+  --shadow-soft: 0 1px 2px rgb(var(--shadow-color) / 0.04), 0 4px 16px rgb(var(--shadow-color) / 0.06);
+  --shadow-lift: 0 2px 4px rgb(var(--shadow-color) / 0.06), 0 12px 32px rgb(var(--shadow-color) / 0.1);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-poppins), ui-sans-serif, system-ui, sans-serif;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+/* Form fields show focus with their own border colour only — no extra outline. */
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: none;
+}
+
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@utility animate-fade-up {
+  animation: fade-up 0.35s ease-out both;
+}
+
+/* Landing hero visual */
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Animates an SVG stroke from nothing to its own stroke-dasharray (use pathLength="100"). */
+@keyframes draw {
+  from {
+    stroke-dasharray: 0 100;
+  }
+}
+
+/* Rotates from 0 to the element's own transform. */
+@keyframes spin-in {
+  from {
+    transform: rotate(0deg);
+  }
+}
+
+@keyframes grow-up {
+  from {
+    transform: scaleY(0);
+  }
+}
+
+@keyframes orbit {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes typing {
+  0%,
+  60%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.4;
+  }
+  30% {
+    transform: translateY(-3px);
+    opacity: 1;
+  }
+}
+
+@keyframes blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+@keyframes ping-soft {
+  from {
+    transform: scale(1);
+    opacity: 0.6;
+  }
+  to {
+    transform: scale(2.2);
+    opacity: 0;
+  }
+}
+
+@utility animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+@utility animate-pop-in {
+  animation: pop-in 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@utility animate-grow-up {
+  animation: grow-up 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
+  transform-origin: bottom;
+}
+
+@utility animate-orbit {
+  animation: orbit 40s linear infinite;
+}
+
+@utility animate-typing {
+  animation: typing 1.2s ease-in-out infinite;
+}
+
+@utility animate-ping-soft {
+  animation: ping-soft 1.6s ease-out infinite;
+}
+
+@utility no-scrollbar {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }

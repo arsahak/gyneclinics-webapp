@@ -1,36 +1,72 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# GyneClinics — Patient & Doctor Web (UI)
 
-## Getting Started
-
-First, run the development server:
+Web version of the GyneClinics patient and doctor apps. This phase is **UI only**: all data is mock data
+kept in the browser (localStorage). The backend and production admin authentication come later.
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm run dev     # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+On the landing page, use **Patient demo** or **Doctor demo** to skip signup. The full signup flow
+(`/login` → OTP `123456` → role → onboarding → consent) also works.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Structure
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Path | What's there |
+| --- | --- |
+| `app/(auth)/` | Login, OTP, role select, patient/doctor onboarding, consent |
+| `app/patient/` | Home tracker, calendar, learn, insights, doctors, messages, profile |
+| `app/doctor/` | Dashboard, verification pending, messages, reviews, profile |
+| `app/admin/stories` | Demo moderation queue for approving or declining submitted community stories |
+| `component/` | UI primitives (`ui/`) and feature components |
+| `lib/services/` | **Swap point for the backend** — mock-backed async functions today |
+| `lib/store/` | Client state (zustand + localStorage) standing in for the API |
+| `lib/cycle.ts` | Cycle length, prediction, fertile window maths |
+| `lib/chat-guard.ts` | Blocks phone numbers, emails, links and social handles in chat/reviews |
+| `lib/locale/` | Location detection and region-based consultation pricing |
+| `lib/ads.ts` | Ad slot placement rules |
 
-## Learn More
+## Community story moderation
 
-To learn more about Next.js, take a look at the following resources:
+Patients can submit a story from **Learn → Share story**. Each submission stays pending until it is
+reviewed in the demo admin dashboard at `/admin/stories`. Only approved stories appear in the Learn
+feed. This workflow is stored locally in the current browser profile; production deployment needs
+server-side moderation, authentication, and persistence.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Region-based pricing
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+When the app opens it detects the visitor's country (IP lookup, falling back to device time zone),
+maps it to a region and logs the open. Doctors set one base fee in GBP (the Europe & UK price);
+each region applies a multiplier from `lib/locale/regions.ts`:
 
-## Deploy on Vercel
+| Region | Currency | Multiplier |
+| --- | --- | --- |
+| Europe & UK | GBP | 1.00 |
+| North America | USD | 1.00 |
+| Middle East | USD | 0.80 |
+| East Asia & Pacific | USD | 0.60 |
+| Latin America | USD | 0.45 |
+| Africa | USD | 0.35 |
+| South Asia | USD | 0.25 |
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Client-side detection can be bypassed with a VPN, so the backend must decide the final price
+(server-side IP country and billing country) before taking payment.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Consultations & messaging
+
+One rule: **chatting with a doctor is a consultation.** Policy values live in `lib/consultation.ts`.
+
+1. Patient opens a doctor → **Book consultation** → picks *Chat now* (doctor online) or a time slot.
+2. Writes their concern (sent as the first message) → pays → booking is **confirmed automatically**.
+3. Chat is open for **24 hours** from the start time, then **7 days of free follow-up** on the same concern.
+4. After that the chat is read-only; **Book again** starts a new consultation.
+5. Full refund if the doctor doesn't reply within **12 hours**.
+
+Checkout (`component/booking/checkout.tsx`) is a dummy of the real sequence: **schedule check** (slot
+re-checked and held for 10 minutes) → **payment** (card, local mobile wallet with OTP, or Apple/Google Pay)
+→ **consultation confirmation** → receipt. Test card `4242 4242 4242 4242` succeeds, `4000 0000 0000 0002`
+is declined; wallet OTP is `123456`.
+
+Free cases: follow-up messages, consultations with a fee of 0 (set by admin for promos — see Dr. Farah
+Siddiqui in the mock data), and platform support. Payment is mocked; the backend should redirect to a
+hosted checkout (e.g. Stripe / SSLCommerz) and create the booking only on the gateway's success webhook.
