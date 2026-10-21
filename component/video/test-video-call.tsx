@@ -27,9 +27,32 @@ function errorMessage(error: unknown) {
   const { name, code, message } = (error ?? {}) as { name?: string; code?: number; message?: string };
   if (name === "NotAllowedError") return "Allow camera and microphone access in your browser, then try again.";
   if (name === "NotFoundError") return "No camera or microphone found on this device.";
+  if (name === "NotSupportedError" || name === "TypeError") return "This browser can't make video calls. Try Chrome, Edge or Safari.";
   if (name === "NotReadableError") return "Your camera or microphone is in use by another app.";
   if (code === 53105) return "Two people are already in the test call. Please try again later.";
   return message || "Couldn't join the call. Please try again.";
+}
+
+const VIDEO = { width: 1280, height: 720, frameRate: 24 };
+
+/**
+ * The camera and mic this device can give. Whatever is missing or busy is left
+ * out, so the call still works (at worst you can only watch and listen).
+ * A refused permission is thrown, so we can ask for it.
+ */
+async function deviceTracks(): Promise<{ tracks: LocalTrack[]; problem: string | null }> {
+  const { createLocalTracks } = await import("twilio-video");
+  let problem: string | null = null;
+  for (const options of [{ audio: true, video: VIDEO }, { audio: true, video: false }, { audio: false, video: VIDEO }]) {
+    try {
+      return { tracks: await createLocalTracks(options), problem: null };
+    } catch (error) {
+      const name = (error as { name?: string })?.name;
+      if (name === "NotAllowedError") throw error;
+      problem = name === "NotReadableError" ? "in use by another app" : "not found";
+    }
+  }
+  return { tracks: [], problem };
 }
 
 export function TestVideoCall({ role }: { role: "doctor" | "patient" }) {
@@ -39,6 +62,10 @@ export function TestVideoCall({ role }: { role: "doctor" | "patient" }) {
   const [remote, setRemote] = useState<RemoteParticipant | null>(null);
   const [micOn, setMicOn] = useState(true);
   const [camOn, setCamOn] = useState(true);
+  // Which devices joined the call (a device can be missing).
+  const [hasMic, setHasMic] = useState(true);
+  const [hasCam, setHasCam] = useState(true);
+  const [deviceNote, setDeviceNote] = useState<string | null>(null);
   const [secondsLeft, setSecondsLeft] = useState(0);
 
   const roomRef = useRef<Room | null>(null);
@@ -102,21 +129,39 @@ export function TestVideoCall({ role }: { role: "doctor" | "patient" }) {
     localRef.current?.replaceChildren();
     setError(null);
     setEndNote(null);
+    // Browsers only allow the camera on https:// (or localhost).
+    if (!window.isSecureContext || !navigator.mediaDevices) {
+      setError("Video calls need a secure connection. Open this site with https:// and try again.");
+      return;
+    }
     setPhase("joining");
+    let tracks: LocalTrack[] = [];
     try {
       const { ticket, error: ticketError } = await joinTestCallAction();
       if (!ticket) throw new Error(ticketError ?? "Couldn't join the call.");
 
+      const devices = await deviceTracks();
+      tracks = devices.tracks;
+      const mic = tracks.some((t) => t.kind === "audio");
+      const cam = tracks.some((t) => t.kind === "video");
+      setHasMic(mic);
+      setHasCam(cam);
+      setMicOn(mic);
+      setCamOn(cam);
+      setDeviceNote(
+        mic && cam
+          ? null
+          : !mic && !cam
+            ? `Camera and microphone ${devices.problem ?? "not found"}. You can see and hear the ${otherSide}, but they can't see or hear you.`
+            : !cam
+              ? `Camera ${devices.problem ?? "not found"}. The ${otherSide} can hear you but not see you.`
+              : `Microphone ${devices.problem ?? "not found"}. The ${otherSide} can see you but not hear you.`,
+      );
+
       const { connect } = await import("twilio-video");
-      const room = await connect(ticket.token, {
-        name: ticket.roomName,
-        audio: true,
-        video: { width: 1280, height: 720, frameRate: 24 },
-      });
+      const room = await connect(ticket.token, { name: ticket.roomName, tracks });
       roomRef.current = room;
       setSecondsLeft(ticket.maxMinutes * 60);
-      setMicOn(true);
-      setCamOn(true);
       setPhase("connected");
 
       // Own camera, small in the corner.
@@ -143,6 +188,7 @@ export function TestVideoCall({ role }: { role: "doctor" | "patient" }) {
         setPhase("ended");
       });
     } catch (err) {
+      tracks.forEach((track) => "stop" in track && track.stop());
       setError(errorMessage(err));
       setPhase("idle");
     }
@@ -225,17 +271,25 @@ export function TestVideoCall({ role }: { role: "doctor" | "patient" }) {
           <div className="absolute right-4 bottom-4 aspect-video w-36 overflow-hidden rounded-2xl border-2 border-white/70 bg-black shadow-lg sm:w-56">
             <div ref={localRef} className={cn("size-full", !camOn && "invisible")} />
             {!camOn && (
-              <div className="absolute inset-0 flex items-center justify-center text-xs text-white/70">Camera off</div>
+              <div className="absolute inset-0 flex items-center justify-center text-xs text-white/70">
+                {hasCam ? "Camera off" : "No camera"}
+              </div>
             )}
             <span className="absolute bottom-1.5 left-2 text-[11px] font-medium text-white/90 drop-shadow">You</span>
           </div>
         </div>
 
+        {deviceNote && (
+          <p role="status" className="rounded-2xl bg-warning-soft p-3 text-center text-sm text-warning">
+            {deviceNote}
+          </p>
+        )}
+
         <div className="flex flex-wrap items-center justify-center gap-3">
-          <Button variant={micOn ? "outline" : "danger"} size="lg" onClick={toggleMic} aria-pressed={!micOn}>
+          <Button variant={micOn ? "outline" : "danger"} size="lg" onClick={toggleMic} aria-pressed={!micOn} disabled={!hasMic}>
             {micOn ? <Mic /> : <MicOff />} {micOn ? "Mute" : "Unmute"}
           </Button>
-          <Button variant={camOn ? "outline" : "danger"} size="lg" onClick={toggleCam} aria-pressed={!camOn}>
+          <Button variant={camOn ? "outline" : "danger"} size="lg" onClick={toggleCam} aria-pressed={!camOn} disabled={!hasCam}>
             {camOn ? <VideoIcon /> : <VideoOff />} {camOn ? "Camera off" : "Camera on"}
           </Button>
           <Button variant="destructive" size="lg" onClick={() => leave()}>
