@@ -5,7 +5,7 @@ import { CalendarCheck, MessageCircle } from "lucide-react";
 import Link from "next/link";
 import { Badge } from "@/component/ui/badge";
 import { Card } from "@/component/ui/card";
-import { STATE_LABEL, timeline } from "@/lib/consultation";
+import { consultationDoctor, STATE_LABEL, timeline } from "@/lib/consultation";
 import { useNow } from "@/lib/hooks";
 import { useConsultations } from "@/lib/store/consultations";
 import type { Doctor } from "@/lib/types";
@@ -19,12 +19,11 @@ export function NextConsultation({ doctors }: { doctors: Doctor[] }) {
     .filter(({ t }) => t.state === "upcoming" || t.state === "active")
     .sort((a, b) => a.c.startsAt.localeCompare(b.c.startsAt))[0];
   if (!next) return null;
-  const doctor = doctors.find((d) => d.id === next.c.doctorId);
-  if (!doctor) return null;
+  const doctor = consultationDoctor(next.c, doctors);
   const status = STATE_LABEL[next.t.state];
 
   return (
-    <Link href={`/patient/messages/${doctor.id}`} className="block">
+    <Link href={doctor.listed ? `/patient/messages/${doctor.id}` : "/patient/consultations"} className="block">
       <Card className="p-5 transition-shadow hover:shadow-[var(--shadow-lift)]">
         <div className="flex items-start gap-3">
           <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-2xl bg-primary-soft text-primary">

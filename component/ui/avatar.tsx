@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { cn, initials } from "@/lib/utils";
 
 export function Avatar({
@@ -5,11 +6,14 @@ export function Avatar({
   hue = 186,
   size = "md",
   className,
+  src,
 }: {
   name: string;
   hue?: number;
   size?: "sm" | "md" | "lg" | "xl";
   className?: string;
+  /** Photo URL; falls back to initials. */
+  src?: string;
 }) {
   const sizes = {
     sm: "size-9 text-xs",
@@ -17,6 +21,18 @@ export function Avatar({
     lg: "size-14 text-base",
     xl: "size-20 text-xl",
   };
+  if (src) {
+    const pixels = { sm: 36, md: 44, lg: 56, xl: 80 }[size];
+    return (
+      <Image
+        src={src}
+        alt=""
+        width={pixels}
+        height={pixels}
+        className={cn("shrink-0 rounded-full object-cover", sizes[size], className)}
+      />
+    );
+  }
   return (
     <span
       aria-hidden

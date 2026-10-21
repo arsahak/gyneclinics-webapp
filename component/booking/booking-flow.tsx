@@ -12,11 +12,13 @@ import {
   Clock3,
   LockKeyhole,
   MessageCircle,
+  MessageSquareText,
   RotateCcw,
   ShieldCheck,
   Zap,
 } from "lucide-react";
 import { useMemo, useState } from "react";
+import { type ConfirmationSms, confirmBookingAction } from "@/app/actions/consultationAction";
 import { AvailabilityLabel } from "@/component/doctors/availability";
 import { Disclaimer } from "@/component/shared/disclaimer";
 import { Avatar } from "@/component/ui/avatar";
@@ -67,7 +69,7 @@ export function BookingFlow({ doctor }: { doctor: Doctor }) {
   const book = useConsultations((s) => s.book);
   const send = useChat((s) => s.send);
 
-  const schedule = useDoctorSchedule(doctor.id, doctor.availability);
+  const schedule = useDoctorSchedule(doctor.id, doctor.availability, doctor.schedule);
   const instantAllowed = canStartInstantly(doctor.availability, schedule);
   const [step, setStep] = useState(0);
   const [mode, setMode] = useState<ConsultationMode>(instantAllowed ? "instant" : "scheduled");
@@ -77,6 +79,8 @@ export function BookingFlow({ doctor }: { doctor: Doctor }) {
   const [agreed, setAgreed] = useState(false);
   const [checkingOut, setCheckingOut] = useState(false);
   const [booked, setBooked] = useState<Consultation | null>(null);
+  // The confirmation text: null while the booking is being saved.
+  const [sms, setSms] = useState<ConfirmationSms | { status: "error"; error: string } | null>(null);
 
   const days = useMemo(
     () =>
@@ -94,7 +98,7 @@ export function BookingFlow({ doctor }: { doctor: Doctor }) {
   const blocked = scanForContactDetails(concern);
   const openConsultation = current && (current.state === "active" || current.state === "upcoming") ? current : null;
 
-  if (booked) return <Confirmation consultation={booked} doctor={doctor} />;
+  if (booked) return <Confirmation consultation={booked} doctor={doctor} sms={sms} />;
 
   if (checkingOut) {
     return (
@@ -117,6 +121,7 @@ export function BookingFlow({ doctor }: { doctor: Doctor }) {
         onSuccess={(result) => {
           const consultation = book({
             doctorId: doctor.id,
+            doctor: { name: doctor.name, title: doctor.title, hue: doctor.hue, avatar: doctor.avatar },
             mode,
             concern: concern.trim(),
             startsAt: mode === "instant" ? new Date().toISOString() : slot!.toISOString(),
@@ -124,6 +129,11 @@ export function BookingFlow({ doctor }: { doctor: Doctor }) {
           });
           send(doctor.id, "patient", concern.trim());
           setBooked(consultation);
+          // Save it on the backend, which texts the patient a confirmation.
+          confirmBookingAction(consultation, Intl.DateTimeFormat().resolvedOptions().timeZone).then(
+            (result) => setSms(result.sms ?? { status: "error", error: result.error ?? "Couldn't save your booking." }),
+            () => setSms({ status: "error", error: "Can't reach the server." }),
+          );
         }}
       />
     );
@@ -368,7 +378,7 @@ export function BookingFlow({ doctor }: { doctor: Doctor }) {
       <aside className="space-y-4 lg:sticky lg:top-10 lg:self-start">
         <Card className="p-5">
           <div className="flex items-center gap-3">
-            <Avatar name={doctor.name} hue={doctor.hue} />
+            <Avatar name={doctor.name} src={doctor.avatar} hue={doctor.hue} />
             <div className="min-w-0">
               <p className="flex items-center gap-1 truncate font-semibold text-foreground">
                 {doctor.name} <BadgeCheck className="size-4 shrink-0 text-primary" />
@@ -453,7 +463,37 @@ function Row({ label, value }: { label: string; value: React.ReactNode }) {
   );
 }
 
-function Confirmation({ consultation, doctor }: { consultation: Consultation; doctor: Doctor }) {
+function SmsNote({ sms }: { sms: ConfirmationSms | { status: "error"; error: string } | null }) {
+  const text =
+    sms === null
+      ? "Sending your confirmation text…"
+      : sms.status === "sent"
+        ? `Confirmation text sent to ${sms.to}`
+        : sms.status === "error"
+          ? `${sms.error} Your booking is still shown here.`
+          : "We couldn't text you a confirmation. Your booking is confirmed.";
+  return (
+    <p
+      role="status"
+      className={cn(
+        "mt-6 flex items-center justify-center gap-2 rounded-2xl px-3 py-2.5 text-sm",
+        sms?.status === "sent" ? "bg-success-soft text-success" : sms === null ? "bg-surface-2 text-muted-foreground" : "bg-warning-soft text-warning",
+      )}
+    >
+      <MessageSquareText className="size-4 shrink-0" /> {text}
+    </p>
+  );
+}
+
+function Confirmation({
+  consultation,
+  doctor,
+  sms,
+}: {
+  consultation: Consultation;
+  doctor: Doctor;
+  sms: ConfirmationSms | { status: "error"; error: string } | null;
+}) {
   const t = timeline(consultation, new Date(consultation.bookedAt));
   const instant = consultation.mode === "instant";
   const free = consultation.payment.method === "free";
@@ -474,9 +514,11 @@ function Confirmation({ consultation, doctor }: { consultation: Consultation; do
         <p className="mt-2 text-muted-foreground">
           {instant
             ? `Your chat with ${doctor.name} is open now. They've been notified.`
-            : `${doctor.name} will be ready for you on ${format(t.startsAt, "EEEE d MMMM 'at' HH:mm")}. We'll remind you 15 minutes before.`}
+            : `${doctor.name} will be ready for you on ${format(t.startsAt, "EEEE d MMMM 'at' HH:mm")}.`}
         </p>
       </div>
+
+      <SmsNote sms={sms} />
 
       <ol className="mt-8 space-y-0">
         {steps.map((step, i) => (

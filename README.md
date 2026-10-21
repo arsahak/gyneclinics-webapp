@@ -1,20 +1,33 @@
 # GyneClinics — Patient & Doctor Web (UI)
 
-Web version of the GyneClinics patient and doctor apps. This phase is **UI only**: all data is mock data
-kept in the browser (localStorage). The backend and production admin authentication come later.
+Web version of the GyneClinics patient and doctor apps. Sign-in and accounts use the Gyneclinics backend
+through Auth.js; the cycle log, chats and consultations are still mock data kept in the browser (localStorage).
 
 ```bash
-npm run dev     # http://localhost:3000
+cp .env.local.example .env.local   # or create it: AUTH_SECRET + NEXT_PUBLIC_API_URL
+npm run dev                        # http://localhost:3000 (backend on :8000)
 ```
 
-On the landing page, use **Patient demo** or **Doctor demo** to skip signup. The full signup flow
-(`/login` → OTP `123456` → role → onboarding → consent) also works.
+## Sign-in and sessions
+
+`auth.ts` (Auth.js v5) owns the session: a JWT in an encrypted, httpOnly cookie. The backend token is kept
+inside it and only read on the server, never sent to the browser.
+
+1. `/login` — phone number, then the SMS code (in development the backend's `OTP_BYPASS_CODE` works).
+2. New number → `/register` — choose patient or doctor and enter your name; the backend creates the account.
+3. `/onboarding/patient` or `/onboarding/doctor` → `/consent` → the app. Doctors wait on `/doctor/pending`
+   until an admin approves them.
+
+`proxy.ts` sends signed-out users to `/login` and keeps each role in its own area. The layouts then check
+onboarding, consent and verification against fresh backend data (`lib/session.ts`) before rendering.
+Server actions in `app/actions/` call the backend and update the session.
 
 ## Structure
 
 | Path | What's there |
 | --- | --- |
-| `app/(auth)/` | Login, OTP, role select, patient/doctor onboarding, consent |
+| `auth.ts`, `proxy.ts` | Auth.js session and route protection |
+| `app/(auth)/` | Login + OTP, account type, patient/doctor onboarding, consent |
 | `app/patient/` | Home tracker, calendar, learn, insights, doctors, messages, profile |
 | `app/doctor/` | Dashboard, verification pending, messages, reviews, profile |
 | `app/admin/stories` | Demo moderation queue for approving or declining submitted community stories |

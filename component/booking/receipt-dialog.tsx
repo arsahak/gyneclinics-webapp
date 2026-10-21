@@ -17,7 +17,7 @@ export function ReceiptDialog({
   onClose,
 }: {
   consultation: Consultation;
-  doctor: Doctor;
+  doctor: Pick<Doctor, "name">;
   open: boolean;
   onClose: () => void;
 }) {

@@ -16,6 +16,7 @@ export interface ConversationSummary {
   id: string;
   name: string;
   hue: number;
+  avatar?: string;
   subtitle: string;
   badge?: { label: string; tone: ComponentProps<typeof Badge>["tone"] };
 }
@@ -61,7 +62,7 @@ export function ConversationList({
         return (
           <li key={person.id}>
             <Link href={`${basePath}/${person.id}`} className="flex items-center gap-4 p-4 transition-colors hover:bg-surface-2 sm:px-6">
-              <Avatar name={person.name} hue={person.hue} />
+              <Avatar name={person.name} src={person.avatar} hue={person.hue} />
               <div className="min-w-0 flex-1">
                 <div className="flex items-center justify-between gap-3">
                   <p className={cn("truncate text-foreground", awaitingReply ? "font-semibold" : "font-medium")}>{person.name}</p>

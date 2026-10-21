@@ -1,11 +1,12 @@
 "use client";
 
 import { format, formatDistanceStrict } from "date-fns";
-import { CalendarCheck, Clock, RotateCcw } from "lucide-react";
+import { CalendarCheck, Clock, MessageCircle, RotateCcw } from "lucide-react";
+import Link from "next/link";
 import { AvailabilityLabel } from "@/component/doctors/availability";
 import { ConsultationFee } from "@/component/shared/region";
 import { ButtonLink } from "@/component/ui/button";
-import { CONSULTATION_POLICY } from "@/lib/consultation";
+import { CONSULTATION_POLICY, messagingFor } from "@/lib/consultation";
 import { useDoctorConsultation } from "@/lib/hooks";
 import type { Doctor } from "@/lib/types";
 import { ChatThread } from "./chat-thread";
@@ -14,6 +15,7 @@ export function PatientChat({ doctor }: { doctor: Doctor }) {
   const { now, current } = useDoctorConsultation(doctor.id);
   const state = current?.state ?? null;
   const bookHref = `/patient/doctors/${doctor.id}/book`;
+  const messaging = messagingFor(doctor);
 
   let statusBar: React.ReactNode = null;
   let lockedComposer: React.ReactNode = null;
@@ -37,6 +39,20 @@ export function PatientChat({ doctor }: { doctor: Doctor }) {
         body={`${doctor.name} will reply during your consultation. Your concern has already been shared.`}
       />
     );
+  } else if (messaging.free) {
+    // The doctor takes free messages: the chat is open without booking.
+    statusBar = (
+      <StatusBar tone="bg-success-soft text-success" icon={MessageCircle}>
+        <span className="flex-1">Free messages · {doctor.name} replies when available. Not for emergencies.</span>
+        {messaging.consultation && (
+          <Link href={bookHref} className="shrink-0 underline underline-offset-2 hover:no-underline">
+            Book a consultation
+          </Link>
+        )}
+      </StatusBar>
+    );
+  } else if (!messaging.consultation) {
+    lockedComposer = <Locked title={`${doctor.name} isn't taking messages right now`} body="Please try again later." />;
   } else {
     lockedComposer = (
       <Locked
@@ -63,6 +79,7 @@ export function PatientChat({ doctor }: { doctor: Doctor }) {
       counterpart={{
         name: doctor.name,
         hue: doctor.hue,
+        avatar: doctor.avatar,
         subtitle: <AvailabilityLabel value={doctor.availability} />,
       }}
       statusBar={statusBar}

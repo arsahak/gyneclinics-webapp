@@ -11,15 +11,11 @@ import { PageHeader } from "@/component/shared/page-header";
 import { Avatar } from "@/component/ui/avatar";
 import { Badge } from "@/component/ui/badge";
 import { Card } from "@/component/ui/card";
-import { getDoctor, getDoctorReviews, listDoctorIds } from "@/lib/services/doctors";
-
-export function generateStaticParams() {
-  return listDoctorIds().map((id) => ({ id }));
-}
+import { getDoctor, getDoctorReviews } from "@/lib/services/doctors";
 
 export const metadata: Metadata = { title: "Specialist" };
 
-// Rendered after the client-side session check in AppShell, so it can't be validated on the server.
+// The layout checks the session on the server, so this page is rendered per request.
 export const instant = false;
 
 export default async function DoctorProfilePage({ params }: PageProps<"/patient/doctors/[id]">) {
@@ -41,7 +37,7 @@ export default async function DoctorProfilePage({ params }: PageProps<"/patient/
         <div className="min-w-0 space-y-6">
           <Card className="p-5 sm:p-6">
             <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
-              <Avatar name={doctor.name} hue={doctor.hue} size="xl" />
+              <Avatar name={doctor.name} src={doctor.avatar} hue={doctor.hue} size="xl" />
               <div className="flex-1">
                 <div className="flex flex-wrap items-center gap-2">
                   <Badge tone="primary">

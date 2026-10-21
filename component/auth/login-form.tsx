@@ -1,25 +1,28 @@
 "use client";
 
-import { ArrowRight, Smartphone } from "lucide-react";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { ArrowRight, Loader2, Smartphone } from "lucide-react";
+import { useState, useTransition } from "react";
 import { Button } from "@/component/ui/button";
 import { Field, Input } from "@/component/ui/field";
+import { sendOtpAction } from "@/app/actions/authAction";
 import { APP_NAME } from "@/lib/brand";
 import { findDialCode } from "@/lib/locale/dial-codes";
-import { useSession } from "@/lib/store/session";
 import { CountryCodePicker } from "./country-code-picker";
-import { DemoButtons } from "./demo-buttons";
+import { OtpForm } from "./otp-form";
 import { StepHeader } from "./step-header";
 
+/** Sign in or sign up: phone number, then the SMS code. */
 export function LoginForm() {
-  const router = useRouter();
-  const setPhone = useSession((s) => s.setPhone);
   // UK by default; the user can pick any country.
   const [iso, setCountry] = useState("GB");
   const dial = findDialCode(iso)?.[2] ?? "+44";
   const [number, setNumber] = useState("");
   const [error, setError] = useState<string | null>(null);
+  // Set once the code is sent; switches the form to the code step.
+  const [sentTo, setSentTo] = useState<string | null>(null);
+  const [sending, startSending] = useTransition();
+
+  if (sentTo) return <OtpForm phone={sentTo} onChangeNumber={() => setSentTo(null)} />;
 
   const submit = (event: React.FormEvent) => {
     event.preventDefault();
@@ -29,8 +32,11 @@ export function LoginForm() {
       setError("Please enter a valid mobile number.");
       return;
     }
-    setPhone(`${dial} ${digits}`);
-    router.push("/verify-otp");
+    startSending(async () => {
+      const result = await sendOtpAction(`${dial}${digits}`);
+      if ("error" in result) setError(result.error);
+      else setSentTo(result.phone);
+    });
   };
 
   return (
@@ -60,16 +66,21 @@ export function LoginForm() {
             </div>
           </div>
         </Field>
-        <Button type="submit" size="lg" className="w-full">
-          Send code <ArrowRight />
+        <Button type="submit" size="lg" className="w-full" disabled={sending}>
+          {sending ? (
+            <>
+              <Loader2 className="animate-spin" /> Sending code…
+            </>
+          ) : (
+            <>
+              Send code <ArrowRight />
+            </>
+          )}
         </Button>
         <p className="text-center text-xs text-muted-foreground">
           One account per mobile number. By continuing you agree to our Terms and Privacy Policy.
         </p>
       </form>
-      <div className="mt-10 border-t border-border pt-6">
-        <DemoButtons />
-      </div>
     </>
   );
 }

@@ -1,16 +1,36 @@
 "use client";
 
-import { CheckCircle2, Circle, FileCheck2, Hourglass, Mail } from "lucide-react";
+import { CheckCircle2, Circle, CircleX, FileCheck2, Hourglass, Loader2, Mail, RefreshCw } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useTransition } from "react";
+import { useAccount } from "@/component/shared/account-provider";
 import { Button } from "@/component/ui/button";
 import { Card, CardBody } from "@/component/ui/card";
-import { useSession } from "@/lib/store/session";
+import { SUPPORT_EMAIL } from "@/lib/brand";
 import { cn } from "@/lib/utils";
 
 export function PendingVerification() {
   const router = useRouter();
-  const doctor = useSession((s) => s.doctor);
-  const setDoctorStatus = useSession((s) => s.setDoctorStatus);
+  const { doctor, doctorStatus } = useAccount();
+  const [checking, startChecking] = useTransition();
+
+  if (doctorStatus === "rejected") {
+    return (
+      <div className="mx-auto max-w-2xl text-center">
+        <span className="mx-auto inline-flex size-16 items-center justify-center rounded-full bg-danger-soft text-danger">
+          <CircleX className="size-8" />
+        </span>
+        <h1 className="mt-5 font-serif text-3xl font-semibold tracking-tight text-foreground">We couldn&apos;t verify your profile</h1>
+        <p className="mx-auto mt-2 max-w-md text-muted-foreground">
+          Please contact{" "}
+          <a href={`mailto:${SUPPORT_EMAIL}`} className="font-medium text-primary hover:underline">
+            {SUPPORT_EMAIL}
+          </a>{" "}
+          and we&apos;ll help you sort it out.
+        </p>
+      </div>
+    );
+  }
 
   const steps = [
     { label: "Profile submitted", body: "We've received your details and documents.", done: true },
@@ -69,16 +89,10 @@ export function PendingVerification() {
         <Mail className="size-4" /> We&apos;ll notify you by SMS when your profile is approved.
       </p>
 
-      <div className="mt-8 rounded-2xl border border-dashed border-border p-4 text-center">
-        <p className="mb-3 text-xs font-medium tracking-wide text-muted-foreground uppercase">Demo only</p>
-        <Button
-          variant="outline"
-          onClick={() => {
-            setDoctorStatus("approved");
-            router.push("/doctor");
-          }}
-        >
-          Simulate admin approval
+      <div className="mt-8 flex justify-center">
+        {/* Re-runs the server check; an approved doctor is sent to the dashboard. */}
+        <Button variant="outline" disabled={checking} onClick={() => startChecking(() => router.refresh())}>
+          {checking ? <Loader2 className="animate-spin" /> : <RefreshCw />} Check status
         </Button>
       </div>
     </div>

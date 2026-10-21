@@ -5,6 +5,7 @@ import { ArrowRight, BadgeCheck, Bell, CalendarClock, Clock, MessagesSquare, Sta
 import Link from "next/link";
 import { useState } from "react";
 import { Stars } from "@/component/doctors/rating";
+import { useAccount } from "@/component/shared/account-provider";
 import { Avatar } from "@/component/ui/avatar";
 import { Badge } from "@/component/ui/badge";
 import { Card, CardBody, CardHeader } from "@/component/ui/card";
@@ -13,13 +14,12 @@ import { formatMoney, REGION_LIST, regionalFee } from "@/lib/locale/regions";
 import { STATE_LABEL, timeline } from "@/lib/consultation";
 import { useChat } from "@/lib/store/chat";
 import { useConsultations } from "@/lib/store/consultations";
-import { useSession } from "@/lib/store/session";
 import type { PatientThread, Review } from "@/lib/types";
 
 export function DoctorDashboard({ doctorId, threads, reviews }: { doctorId: string; threads: PatientThread[]; reviews: Review[] }) {
-  const doctor = useSession((s) => s.doctor);
-  const online = useSession((s) => s.doctorOnline);
-  const setOnline = useSession((s) => s.setDoctorOnline);
+  const { doctor } = useAccount();
+  // Not saved to the backend yet; resets on reload.
+  const [online, setOnline] = useState(true);
   const conversations = useChat((s) => s.conversations);
   const [now] = useState(() => new Date());
   const allBookings = useConsultations((s) => s.consultations);

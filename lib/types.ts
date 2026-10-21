@@ -1,7 +1,12 @@
 // Shared domain types. These mirror the shapes the backend API will return later,
 // so swapping the mock services for real fetches should not touch the UI.
 
+import type { DoctorSchedule } from "@/lib/availability";
+
 export type Role = "patient" | "doctor";
+
+/** Roles that use this web app. Staff use the admin dashboard. */
+export type AppRole = Role;
 
 export type PregnancyStatus = "not_pregnant" | "trying" | "pregnant" | "postpartum";
 
@@ -69,7 +74,21 @@ export interface Doctor {
   city: string;
   country: string;
   hue: number;
+  /** Profile photo URL, if the doctor uploaded one. */
+  avatar?: string;
   recommended?: boolean;
+  /** Weekly hours from the backend; booking slots are generated from it. */
+  schedule?: DoctorSchedule;
+  /** How patients can reach the doctor. Missing = consultations only. */
+  messaging?: DoctorMessaging;
+}
+
+/** Set by the doctor. At least one is on. */
+export interface DoctorMessaging {
+  /** Patients can message without paying. */
+  free: boolean;
+  /** Patients can book a paid chat consultation. */
+  consultation: boolean;
 }
 
 export interface Review {
@@ -179,6 +198,8 @@ export type PaymentMethodId = "card" | "wallet" | "local";
 export interface Consultation {
   id: string;
   doctorId: string;
+  /** The doctor as they were when booked, so the booking still shows if they leave the directory. */
+  doctor?: { name: string; title?: string; hue: number; avatar?: string };
   mode: ConsultationMode;
   concern: string;
   /** When the chat opens (now for instant, slot start for scheduled). ISO timestamp. */

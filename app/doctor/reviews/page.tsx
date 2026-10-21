@@ -4,17 +4,16 @@ import type { Metadata } from "next";
 import { Stars } from "@/component/doctors/rating";
 import { PageHeader } from "@/component/shared/page-header";
 import { Card, CardBody } from "@/component/ui/card";
-import { DEMO_DOCTOR_ID } from "@/lib/mock/doctors";
-import { getDoctor, getDoctorReviews } from "@/lib/services/doctors";
+import { getDemoDoctor, getDemoDoctorReviews } from "@/lib/services/doctors";
 
 export const metadata: Metadata = { title: "Reviews" };
 
-// Rendered after the client-side session check in AppShell, so it can't be validated on the server.
+// The layout checks the session on the server, so this page is rendered per request.
 export const instant = false;
 
 
 export default async function DoctorReviewsPage() {
-  const [doctor, reviews] = await Promise.all([getDoctor(DEMO_DOCTOR_ID), getDoctorReviews(DEMO_DOCTOR_ID)]);
+  const [doctor, reviews] = await Promise.all([getDemoDoctor(), getDemoDoctorReviews()]);
   // Distribution scaled to the doctor's total review count for the demo.
   const shares = [0.86, 0.1, 0.03, 0.01, 0];
   const total = doctor?.reviewCount ?? reviews.length;

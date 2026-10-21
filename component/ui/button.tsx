@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { ComponentProps } from "react";
 import { cn } from "@/lib/utils";
 
-type Variant = "primary" | "secondary" | "accent" | "outline" | "ghost" | "danger";
+type Variant = "primary" | "secondary" | "accent" | "outline" | "ghost" | "danger" | "destructive";
 type Size = "sm" | "md" | "lg" | "icon";
 
 const variants: Record<Variant, string> = {
@@ -12,6 +12,7 @@ const variants: Record<Variant, string> = {
   outline: "border border-border bg-surface text-foreground hover:bg-surface-2",
   ghost: "text-foreground hover:bg-surface-2",
   danger: "bg-danger-soft text-danger hover:bg-danger hover:text-white",
+  destructive: "bg-danger text-white hover:opacity-90 shadow-sm",
 };
 
 const sizes: Record<Size, string> = {

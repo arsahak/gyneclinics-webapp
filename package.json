@@ -13,10 +13,13 @@
     "date-fns": "^4.1.0",
     "lucide-react": "^0.468.0",
     "next": "16.4.2",
+    "next-auth": "^5.0.0-beta.32",
     "qrcode.react": "^4.2.0",
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "recharts": "^2.15.0",
+    "server-only": "^0.0.1",
+    "twilio-video": "2.36.0",
     "zustand": "^5.0.2"
   },
   "devDependencies": {

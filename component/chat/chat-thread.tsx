@@ -31,7 +31,7 @@ export function ChatThread({
 }: {
   conversationId: string;
   me: Role;
-  counterpart: { name: string; hue: number; subtitle: React.ReactNode };
+  counterpart: { name: string; hue: number; avatar?: string; subtitle: React.ReactNode };
   backHref: string;
   banner?: React.ReactNode;
   /** Shown under the header, e.g. consultation status. */
@@ -69,7 +69,7 @@ export function ChatThread({
         <Link href={backHref} aria-label="Back to messages" className="rounded-full p-2 text-muted-foreground hover:bg-surface-2 hover:text-foreground">
           <ArrowLeft className="size-5" />
         </Link>
-        <Avatar name={counterpart.name} hue={counterpart.hue} size="sm" />
+        <Avatar name={counterpart.name} src={counterpart.avatar} hue={counterpart.hue} size="sm" />
         <div className="min-w-0 flex-1">
           <p className="truncate font-semibold text-foreground">{counterpart.name}</p>
           <div className="truncate text-xs text-muted-foreground">{counterpart.subtitle}</div>

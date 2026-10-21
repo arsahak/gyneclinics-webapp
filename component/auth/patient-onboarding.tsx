@@ -1,12 +1,11 @@
 "use client";
 
 import { addDays, format, parseISO } from "date-fns";
-import { ArrowLeft, ArrowRight } from "lucide-react";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { ArrowLeft, ArrowRight, Loader2 } from "lucide-react";
+import { useState, useTransition } from "react";
 import { Button } from "@/component/ui/button";
 import { Field, Input } from "@/component/ui/field";
-import { useSession } from "@/lib/store/session";
+import { completePatientOnboarding } from "@/app/actions/profileAction";
 import { useTracker } from "@/lib/store/tracker";
 import type { PatientProfile, PregnancyStatus } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -21,13 +20,13 @@ const pregnancyOptions: Array<{ value: PregnancyStatus; label: string; body: str
 
 const STEPS = 4;
 
-export function PatientOnboarding() {
-  const router = useRouter();
-  const savePatient = useSession((s) => s.savePatient);
+export function PatientOnboarding({ fullName }: { fullName: string }) {
   const [today] = useState(() => format(new Date(), "yyyy-MM-dd"));
   const [step, setStep] = useState(1);
+  const [error, setError] = useState<string | null>(null);
+  const [saving, startSaving] = useTransition();
   const [form, setForm] = useState<PatientProfile>({
-    fullName: "",
+    fullName,
     dateOfBirth: "",
     heightCm: 0,
     weightKg: 0,
@@ -48,7 +47,8 @@ export function PatientOnboarding() {
   ][step - 1];
 
   const finish = () => {
-    savePatient(form);
+    setError(null);
+    // The cycle log still lives in this browser; start it from the onboarding answers.
     const tracker = useTracker.getState();
     tracker.reset();
     if (form.lastPeriodStart) {
@@ -58,7 +58,11 @@ export function PatientOnboarding() {
       });
     }
     tracker.addWeight({ date: today, kg: form.weightKg });
-    router.push("/consent");
+    startSaving(async () => {
+      // Redirects to the consent step on success.
+      const result = await completePatientOnboarding(form);
+      if (result?.error) setError(result.error);
+    });
   };
 
   const titles = [
@@ -140,19 +144,32 @@ export function PatientOnboarding() {
         )}
       </div>
 
+      {error && (
+        <p role="alert" className="mt-6 text-sm text-danger">
+          {error}
+        </p>
+      )}
       <div className="mt-8 flex gap-3">
         {step > 1 && (
-          <Button variant="outline" size="lg" onClick={() => setStep(step - 1)}>
+          <Button variant="outline" size="lg" disabled={saving} onClick={() => setStep(step - 1)}>
             <ArrowLeft /> Back
           </Button>
         )}
         <Button
           size="lg"
           className="flex-1"
-          disabled={!valid}
+          disabled={!valid || saving}
           onClick={() => (step < STEPS ? setStep(step + 1) : finish())}
         >
-          {step < STEPS ? "Continue" : "Save profile"} <ArrowRight />
+          {saving ? (
+            <>
+              <Loader2 className="animate-spin" /> Saving…
+            </>
+          ) : (
+            <>
+              {step < STEPS ? "Continue" : "Save profile"} <ArrowRight />
+            </>
+          )}
         </Button>
       </div>
     </>

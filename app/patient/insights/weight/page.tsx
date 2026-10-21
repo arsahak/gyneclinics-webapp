@@ -3,7 +3,7 @@ import { WeightInsights } from "@/component/insights/weight-insights";
 
 export const metadata: Metadata = { title: "Weight" };
 
-// Rendered after the client-side session check in AppShell, so it can't be validated on the server.
+// The layout checks the session on the server, so this page is rendered per request.
 export const instant = false;
 
 export default function WeightPage() {

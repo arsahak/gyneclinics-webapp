@@ -1,7 +1,6 @@
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import type { Consultation } from "@/lib/types";
-import { uid } from "@/lib/utils";
 
 // Matches the seeded chat history in lib/mock/engagement.ts.
 const seed: Consultation[] = [
@@ -25,6 +24,12 @@ const seed: Consultation[] = [
   },
 ];
 
+/** "GC-" and 6 letters or digits, e.g. GC-4K7Q2M. */
+function newReference() {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  return `GC-${Array.from({ length: 6 }, () => chars[Math.floor(Math.random() * chars.length)]).join("")}`;
+}
+
 interface ConsultationState {
   consultations: Consultation[];
   book: (consultation: Omit<Consultation, "id" | "bookedAt">) => Consultation;
@@ -38,7 +43,7 @@ export const useConsultations = create<ConsultationState>()(
       book: (input) => {
         const consultation: Consultation = {
           ...input,
-          id: `GC-${uid("").slice(1, 7).toUpperCase()}`,
+          id: newReference(),
           bookedAt: new Date().toISOString(),
         };
         set((s) => ({ consultations: [consultation, ...s.consultations] }));

@@ -24,8 +24,14 @@ export const useAvailability = create<AvailabilityState>()(
   ),
 );
 
-/** The doctor's saved schedule, or their default. Stable between renders so it's safe in effect deps. */
-export function useDoctorSchedule(doctorId: string, availability: Availability) {
+/**
+ * The doctor's schedule: from the backend when given, else one saved in this
+ * browser, else a default. Stable between renders so it's safe in effect deps.
+ */
+export function useDoctorSchedule(doctorId: string, availability: Availability, serverSchedule?: DoctorSchedule) {
   const saved = useAvailability((s) => s.schedules[doctorId]);
-  return useMemo(() => saved ?? defaultScheduleFor(doctorId, availability), [saved, doctorId, availability]);
+  return useMemo(
+    () => serverSchedule ?? saved ?? defaultScheduleFor(doctorId, availability),
+    [serverSchedule, saved, doctorId, availability],
+  );
 }

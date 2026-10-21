@@ -9,7 +9,6 @@ import { useChat } from "@/lib/store/chat";
 import { useConsultations } from "@/lib/store/consultations";
 import { useLibrary } from "@/lib/store/library";
 import { useLocaleStore } from "@/lib/store/locale";
-import { useSession } from "@/lib/store/session";
 import { useTracker } from "@/lib/store/tracker";
 
 const SESSION_FLAG = "gc-open-tracked";
@@ -20,7 +19,6 @@ export function Providers({ children }: { children: React.ReactNode }) {
     let cancelled = false;
 
     Promise.all([
-      useSession.persist.rehydrate(),
       useTracker.persist.rehydrate(),
       useLibrary.persist.rehydrate(),
       useChat.persist.rehydrate(),

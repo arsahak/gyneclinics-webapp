@@ -7,11 +7,14 @@ import { EmptyState } from "@/component/shared/empty-state";
 import { Button } from "@/component/ui/button";
 import { Input, Select } from "@/component/ui/field";
 import { FEED_AD_FREQUENCY } from "@/lib/ads";
+import { type DoctorConsultation, useMyDoctorConsultations } from "@/lib/hooks";
 import type { Availability, Doctor } from "@/lib/types";
 import { DoctorCard } from "./doctor-card";
 
 type Sort = "recommended" | "rating" | "experience" | "fee";
 const AVAILABILITY_RANK: Record<Availability, number> = { online: 0, today: 1, this_week: 2, away: 3 };
+/** "Your doctors" order: open consultations first, then the most recent. */
+const STATE_RANK: Record<DoctorConsultation["state"], number> = { active: 0, upcoming: 1, follow_up: 2, closed: 3, refunded: 4 };
 
 const initialFilters = {
   query: "",
@@ -52,6 +55,19 @@ export function DoctorBrowser({ doctors }: { doctors: Doctor[] }) {
   }, [doctors, filters]);
 
   const active = JSON.stringify(filters) !== JSON.stringify(initialFilters);
+
+  // Doctors the patient has booked, shown first ("Your doctors") unless a filter is on.
+  const mine = useMyDoctorConsultations();
+  const yourDoctors = active
+    ? []
+    : visible
+        .filter((d) => mine.has(d.id))
+        .sort((a, b) => {
+          const x = mine.get(a.id)!;
+          const y = mine.get(b.id)!;
+          return STATE_RANK[x.state] - STATE_RANK[y.state] || y.startsAt.getTime() - x.startsAt.getTime();
+        });
+  const others = yourDoctors.length ? visible.filter((d) => !mine.has(d.id)) : visible;
 
   return (
     <>
@@ -106,14 +122,27 @@ export function DoctorBrowser({ doctors }: { doctors: Doctor[] }) {
         )}
       </div>
 
+      {yourDoctors.length > 0 && (
+        <section className="mb-8">
+          <h2 className="font-serif text-xl font-semibold text-foreground">Your doctors</h2>
+          <p className="mb-4 text-sm text-muted-foreground">Specialists you&apos;ve booked a consultation with.</p>
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {yourDoctors.map((doctor) => (
+              <DoctorCard key={doctor.id} doctor={doctor} consultation={mine.get(doctor.id)} />
+            ))}
+          </div>
+          {others.length > 0 && <h2 className="mt-8 font-serif text-xl font-semibold text-foreground">All specialists</h2>}
+        </section>
+      )}
+
       {visible.length === 0 ? (
         <EmptyState icon={Stethoscope} title="No specialists match" description="Try removing a filter to see more doctors." />
       ) : (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {visible.map((doctor, i) => (
+          {others.map((doctor, i) => (
             <Fragment key={doctor.id}>
-              <DoctorCard doctor={doctor} />
-              {(i + 1) % FEED_AD_FREQUENCY === 0 && i < visible.length - 1 && (
+              <DoctorCard doctor={doctor} consultation={mine.get(doctor.id)} />
+              {(i + 1) % FEED_AD_FREQUENCY === 0 && i < others.length - 1 && (
                 <AdBanner slot="doctors-feed" className="md:col-span-2 xl:col-span-3" />
               )}
             </Fragment>

@@ -1,13 +1,40 @@
 import { addDays, addHours } from "date-fns";
 import { slotsFor, type DoctorSchedule } from "@/lib/availability";
 import type { RegionId } from "@/lib/locale/regions";
-import type { Availability, Consultation, PaymentMethodId } from "@/lib/types";
+import { doctors as demoDoctors } from "@/lib/mock/doctors";
+import type { Availability, Consultation, Doctor, DoctorMessaging, PaymentMethodId } from "@/lib/types";
 
 /**
- * One rule keeps messaging simple: chatting with a doctor is a consultation.
- * Patients book (and pay, unless the fee is 0), the chat opens for the session,
- * then stays open for free follow-up on the same concern before closing.
+ * Each doctor chooses how patients reach them (`Doctor.messaging`):
+ * - free messages: patients chat without booking;
+ * - consultation: patients book (and pay, unless the fee is 0), the chat opens
+ *   for the session, then stays open for free follow-up on the same concern.
+ * A doctor can offer one or both.
  */
+/** Who a consultation is with. `listed` = the doctor is still in the directory (profile and chat open). */
+export interface ConsultationDoctor {
+  id: string;
+  name: string;
+  title?: string;
+  hue: number;
+  avatar?: string;
+  listed: boolean;
+}
+
+/** The doctor for a booking: from the directory, else as saved at booking time. */
+export function consultationDoctor(c: Consultation, doctors: Doctor[]): ConsultationDoctor {
+  const listed = doctors.find((d) => d.id === c.doctorId);
+  if (listed) return { id: listed.id, name: listed.name, title: listed.title, hue: listed.hue, avatar: listed.avatar, listed: true };
+  const saved = c.doctor ?? demoDoctors.find((d) => d.id === c.doctorId);
+  return { id: c.doctorId, name: saved?.name ?? "Your doctor", title: saved?.title, hue: saved?.hue ?? 186, avatar: saved?.avatar, listed: false };
+}
+
+export const DEFAULT_MESSAGING: DoctorMessaging = { free: false, consultation: true };
+
+export function messagingFor(doctor: Pick<Doctor, "messaging">): DoctorMessaging {
+  return doctor.messaging ?? DEFAULT_MESSAGING;
+}
+
 export const CONSULTATION_POLICY = {
   /** Chat is fully open for this long after the consultation starts. */
   sessionHours: 24,

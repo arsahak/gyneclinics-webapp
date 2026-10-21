@@ -20,6 +20,7 @@ export function PatientConversations({ doctors }: { doctors: Doctor[] }) {
       id: d.id,
       name: d.name,
       hue: d.hue,
+      avatar: d.avatar,
       subtitle: d.title,
       badge: state ? STATE_LABEL[state] : undefined,
     };

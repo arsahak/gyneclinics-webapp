@@ -4,13 +4,13 @@ import { differenceInCalendarDays, format } from "date-fns";
 import { BellRing, CalendarDays, CalendarPlus, Droplet, Sparkles, Timer } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
+import { useAccount } from "@/component/shared/account-provider";
 import { Disclaimer } from "@/component/shared/disclaimer";
 import { EmptyState } from "@/component/shared/empty-state";
 import { Badge } from "@/component/ui/badge";
 import { Button, ButtonLink } from "@/component/ui/button";
 import { Card } from "@/component/ui/card";
 import { useCycle } from "@/lib/hooks";
-import { useSession } from "@/lib/store/session";
 import { useTracker } from "@/lib/store/tracker";
 import { CycleRing } from "./cycle-ring";
 import { PeriodDialog } from "./period-dialog";
@@ -29,7 +29,7 @@ function greeting(hour: number) {
 }
 
 export function Greeting() {
-  const name = useSession((s) => s.patient?.fullName.split(" ")[0]);
+  const name = useAccount().fullName.split(" ")[0];
   const [now] = useState(() => new Date());
   return (
     <div className="mb-6">

@@ -4,6 +4,7 @@ import { format, parseISO } from "date-fns";
 import Image from "next/image";
 import { CheckCircle2, Clock, ImagePlus, PenLine, X, XCircle } from "lucide-react";
 import { useState } from "react";
+import { useAccount } from "@/component/shared/account-provider";
 import { Disclaimer } from "@/component/shared/disclaimer";
 import { Badge } from "@/component/ui/badge";
 import { Button } from "@/component/ui/button";
@@ -11,7 +12,6 @@ import { Card } from "@/component/ui/card";
 import { Checkbox, Field, Input, Select, Textarea } from "@/component/ui/field";
 import { describeBlocked, scanForContactDetails } from "@/lib/chat-guard";
 import { useLibrary } from "@/lib/store/library";
-import { useSession } from "@/lib/store/session";
 import type { ArticleCategory, StoryStatus } from "@/lib/types";
 
 const STATUS: Record<StoryStatus, { label: string; tone: "warning" | "success" | "danger"; icon: typeof Clock }> = {
@@ -24,7 +24,7 @@ const MAX_IMAGE_BYTES = 1_000_000;
 
 export function StoryForm({ categories }: { categories: ArticleCategory[] }) {
   const { stories, submitStory } = useLibrary();
-  const authorName = useSession((s) => s.patient?.fullName ?? "Community member");
+  const authorName = useAccount().fullName || "Community member";
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [category, setCategory] = useState<ArticleCategory>(categories[0]);

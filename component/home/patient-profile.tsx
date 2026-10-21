@@ -1,8 +1,9 @@
 "use client";
 
 import { differenceInYears, parseISO } from "date-fns";
-import { Bell, BellOff, Pencil } from "lucide-react";
-import { useState, useSyncExternalStore } from "react";
+import { Bell, BellOff, Loader2, Pencil } from "lucide-react";
+import { useState, useSyncExternalStore, useTransition } from "react";
+import { useAccount } from "@/component/shared/account-provider";
 import { AppearanceCard, PrivacyCard } from "@/component/shared/account-settings";
 import { LocationCard } from "@/component/shared/location-card";
 import { Avatar } from "@/component/ui/avatar";
@@ -11,8 +12,8 @@ import { Button } from "@/component/ui/button";
 import { Card, CardBody, CardHeader } from "@/component/ui/card";
 import { Dialog } from "@/component/ui/dialog";
 import { Field, Input, Select, Switch } from "@/component/ui/field";
+import { updatePatientProfile } from "@/app/actions/profileAction";
 import { useToday } from "@/lib/hooks";
-import { useSession } from "@/lib/store/session";
 import { useTracker } from "@/lib/store/tracker";
 import type { PatientProfile, PregnancyStatus } from "@/lib/types";
 
@@ -25,11 +26,11 @@ const PREGNANCY_LABEL: Record<PregnancyStatus, string> = {
 
 export function PatientProfileView() {
   const today = useToday();
-  const patient = useSession((s) => s.patient);
-  const phone = useSession((s) => s.phone);
-  const savePatient = useSession((s) => s.savePatient);
+  const { patient, phone } = useAccount();
   const seedDemo = useTracker((s) => s.seedDemo);
   const [editing, setEditing] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [saving, startSaving] = useTransition();
   if (!patient) return null;
 
   const age = patient.dateOfBirth ? differenceInYears(today, parseISO(patient.dateOfBirth)) : null;
@@ -76,11 +77,20 @@ export function PatientProfileView() {
       <EditProfileDialog
         key={String(editing)}
         open={editing}
-        onClose={() => setEditing(false)}
-        profile={patient}
-        onSave={(p) => {
-          savePatient(p);
+        onClose={() => {
           setEditing(false);
+          setSaveError(null);
+        }}
+        profile={patient}
+        saving={saving}
+        error={saveError}
+        onSave={(p) => {
+          setSaveError(null);
+          startSaving(async () => {
+            const result = await updatePatientProfile(p);
+            if (result?.error) setSaveError(result.error);
+            else setEditing(false);
+          });
         }}
       />
     </div>
@@ -150,11 +160,15 @@ function EditProfileDialog({
   onClose,
   profile,
   onSave,
+  saving,
+  error,
 }: {
   open: boolean;
   onClose: () => void;
   profile: PatientProfile;
   onSave: (profile: PatientProfile) => void;
+  saving: boolean;
+  error: string | null;
 }) {
   const [form, setForm] = useState(profile);
   return (
@@ -190,7 +204,25 @@ function EditProfileDialog({
             ))}
           </Select>
         </Field>
-        <Button type="submit" className="w-full">Save changes</Button>
+        {form.pregnancyStatus === "pregnant" && (
+          <Field label="Estimated due date" htmlFor="p-due">
+            <Input id="p-due" type="date" value={form.dueDate ?? ""} onChange={(e) => setForm({ ...form, dueDate: e.target.value })} />
+          </Field>
+        )}
+        {error && (
+          <p role="alert" className="text-sm text-danger">
+            {error}
+          </p>
+        )}
+        <Button type="submit" className="w-full" disabled={saving}>
+          {saving ? (
+            <>
+              <Loader2 className="animate-spin" /> Saving…
+            </>
+          ) : (
+            "Save changes"
+          )}
+        </Button>
       </form>
     </Dialog>
   );

@@ -1,21 +1,18 @@
 "use client";
 
-import { ArrowLeft, ArrowRight, FileCheck2, Plus, Upload, X, Zap } from "lucide-react";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { ArrowLeft, ArrowRight, FileImage, FileText, Loader2, Plus, Upload, X, Zap } from "lucide-react";
+import { useState, useTransition } from "react";
 import { Badge } from "@/component/ui/badge";
 import { Button } from "@/component/ui/button";
 import { Field, Input, Select, Switch, Textarea } from "@/component/ui/field";
 import { SLOT_LENGTHS, TIME_OPTIONS, toMinutes, WEEKDAYS_SHORT } from "@/lib/availability";
+import { completeDoctorOnboarding } from "@/app/actions/profileAction";
 import { REGION_LIST, regionalFee } from "@/lib/locale/regions";
-import { DEMO_DOCTOR_ID } from "@/lib/mock/doctors";
-import { useAvailability } from "@/lib/store/availability";
-import { useSession } from "@/lib/store/session";
 import type { DoctorProfileDraft } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { StepHeader } from "./step-header";
 
-const SPECIALIZATIONS = [
+export const SPECIALIZATIONS = [
   "General Gynaecology",
   "Reproductive Medicine",
   "Urogynaecology & Pelvic Health",
@@ -27,7 +24,40 @@ const SPECIALIZATIONS = [
 
 const STEPS = 5;
 
-function ChipInput({ values, onChange, placeholder }: { values: string[]; onChange: (v: string[]) => void; placeholder: string }) {
+// Supporting documents: images, PDF and Word files, up to 10 MB each.
+const DOCUMENT_TYPES: Record<string, string> = {
+  jpg: "image/jpeg",
+  jpeg: "image/jpeg",
+  png: "image/png",
+  svg: "image/svg+xml",
+  webp: "image/webp",
+  pdf: "application/pdf",
+  doc: "application/msword",
+  docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+};
+// Extensions and MIME types, so every browser's file picker filters correctly.
+const DOCUMENT_ACCEPT = [
+  ...Object.keys(DOCUMENT_TYPES).map((ext) => `.${ext}`),
+  ...new Set(Object.values(DOCUMENT_TYPES)),
+].join(",");
+const MAX_DOCUMENT_MB = 10;
+const IMAGE_EXTENSIONS = ["jpg", "jpeg", "png", "svg", "webp"];
+
+const extensionOf = (name: string) => (name.includes(".") ? name.split(".").pop()!.toLowerCase() : "");
+
+/** Splits picked files into accepted names and readable reasons for the rest. */
+function checkDocuments(files: File[]) {
+  const accepted: string[] = [];
+  const problems: string[] = [];
+  for (const file of files) {
+    if (!Object.hasOwn(DOCUMENT_TYPES, extensionOf(file.name))) problems.push(`${file.name}: file type not supported`);
+    else if (file.size > MAX_DOCUMENT_MB * 1024 * 1024) problems.push(`${file.name}: larger than ${MAX_DOCUMENT_MB} MB`);
+    else accepted.push(file.name);
+  }
+  return { accepted, problems };
+}
+
+export function ChipInput({ values, onChange, placeholder }: { values: string[]; onChange: (v: string[]) => void; placeholder: string }) {
   const [draft, setDraft] = useState("");
   const add = () => {
     const value = draft.trim();
@@ -63,13 +93,13 @@ function ChipInput({ values, onChange, placeholder }: { values: string[]; onChan
   );
 }
 
-export function DoctorOnboarding() {
-  const router = useRouter();
-  const saveDoctor = useSession((s) => s.saveDoctor);
-  const saveSchedule = useAvailability((s) => s.saveSchedule);
+export function DoctorOnboarding({ fullName }: { fullName: string }) {
   const [step, setStep] = useState(1);
+  const [error, setError] = useState<string | null>(null);
+  const [documentError, setDocumentError] = useState<string | null>(null);
+  const [saving, startSaving] = useTransition();
   const [form, setForm] = useState<DoctorProfileDraft>({
-    fullName: "",
+    fullName,
     title: "",
     specialization: SPECIALIZATIONS[0],
     qualifications: [],
@@ -157,33 +187,47 @@ export function DoctorOnboarding() {
             <Field label="Registration number" htmlFor="reg">
               <Input id="reg" value={form.registrationNumber} onChange={(e) => update("registrationNumber", e.target.value)} placeholder="GMC 1234567" />
             </Field>
-            <Field label="Supporting documents" hint="Registration certificate, degree certificates and photo ID (PDF or image).">
+            <Field
+              label="Supporting documents"
+              hint="Registration certificate, degree certificates and photo ID."
+              error={documentError}
+            >
               <label className="flex cursor-pointer flex-col items-center gap-2 rounded-2xl border-2 border-dashed border-border bg-surface p-6 text-center hover:border-primary/50">
                 <Upload className="size-6 text-primary" />
                 <span className="text-sm font-medium text-foreground">Choose files to upload</span>
-                <span className="text-xs text-muted-foreground">Max 10 MB each</span>
+                <span className="text-xs text-muted-foreground">
+                  JPG, PNG, SVG, WEBP, PDF, DOC or DOCX · max {MAX_DOCUMENT_MB} MB each
+                </span>
                 <input
                   type="file"
                   multiple
-                  accept=".pdf,image/*"
+                  accept={DOCUMENT_ACCEPT}
                   className="sr-only"
                   onChange={(e) => {
-                    const names = Array.from(e.target.files ?? []).map((f) => f.name);
-                    update("documents", [...new Set([...form.documents, ...names])]);
+                    const { accepted, problems } = checkDocuments(Array.from(e.target.files ?? []));
+                    if (accepted.length) update("documents", [...new Set([...form.documents, ...accepted])]);
+                    setDocumentError(problems.length ? problems.join(" · ") : null);
+                    // Allow picking the same file again after removing it.
+                    e.target.value = "";
                   }}
                 />
               </label>
               {form.documents.length > 0 && (
                 <ul className="mt-3 space-y-2">
-                  {form.documents.map((doc) => (
+                  {form.documents.map((doc) => {
+                    const ext = extensionOf(doc);
+                    const Icon = IMAGE_EXTENSIONS.includes(ext) ? FileImage : FileText;
+                    return (
                     <li key={doc} className="flex items-center gap-3 rounded-xl bg-surface-2 px-3 py-2 text-sm">
-                      <FileCheck2 className="size-4 text-success" />
+                      <Icon className="size-4 shrink-0 text-primary" />
                       <span className="flex-1 truncate">{doc}</span>
+                      <Badge className="shrink-0 uppercase">{ext}</Badge>
                       <button type="button" aria-label={`Remove ${doc}`} onClick={() => update("documents", form.documents.filter((d) => d !== doc))}>
                         <X className="size-4 text-muted-foreground" />
                       </button>
                     </li>
-                  ))}
+                    );
+                  })}
                 </ul>
               )}
             </Field>
@@ -299,35 +343,41 @@ export function DoctorOnboarding() {
         )}
       </div>
 
+      {error && (
+        <p role="alert" className="mt-6 text-sm text-danger">
+          {error}
+        </p>
+      )}
       <div className="mt-8 flex gap-3">
         {step > 1 && (
-          <Button variant="outline" size="lg" onClick={() => setStep(step - 1)}>
+          <Button variant="outline" size="lg" disabled={saving} onClick={() => setStep(step - 1)}>
             <ArrowLeft /> Back
           </Button>
         )}
         <Button
           size="lg"
           className="flex-1"
-          disabled={!valid}
+          disabled={!valid || saving}
           onClick={() => {
             if (step < STEPS) return setStep(step + 1);
-            saveDoctor(form);
-            const availability = form.consultationAvailability;
-            saveSchedule(DEMO_DOCTOR_ID, {
-              weekly: Array.from({ length: 7 }, (_, day) =>
-                availability.weekdays.includes(day) ? [{ start: availability.startTime, end: availability.endTime }] : [],
-              ),
-              slotMinutes: availability.slotMinutes,
-              bookingWindowDays: 7,
-              minNoticeHours: 1,
-              instantChat: availability.instantChat,
-              timeOff: [],
-              timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "Europe/London",
+            setError(null);
+            const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || "Europe/London";
+            startSaving(async () => {
+              // Redirects to the consent step on success.
+              const result = await completeDoctorOnboarding(form, timezone);
+              if (result?.error) setError(result.error);
             });
-            router.push("/consent");
           }}
         >
-          {step < STEPS ? "Continue" : "Submit for verification"} <ArrowRight />
+          {saving ? (
+            <>
+              <Loader2 className="animate-spin" /> Submitting…
+            </>
+          ) : (
+            <>
+              {step < STEPS ? "Continue" : "Submit for verification"} <ArrowRight />
+            </>
+          )}
         </Button>
       </div>
     </>

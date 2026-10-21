@@ -1,11 +1,11 @@
 "use client";
 
-import { ShieldCheck } from "lucide-react";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { Loader2, ShieldCheck } from "lucide-react";
+import { useState, useTransition } from "react";
 import { Button } from "@/component/ui/button";
 import { Checkbox } from "@/component/ui/field";
-import { nextStepFor, useSession } from "@/lib/store/session";
+import { acceptConsentAction } from "@/app/actions/authAction";
+import type { AppRole } from "@/lib/types";
 import { StepHeader } from "./step-header";
 
 const PATIENT_TERMS = [
@@ -22,12 +22,11 @@ const DOCTOR_TERMS = [
   "Chat metadata may be monitored for safety and compliance. Message content stays private.",
 ];
 
-export function ConsentForm() {
-  const router = useRouter();
-  const role = useSession((s) => s.role);
-  const acceptConsent = useSession((s) => s.acceptConsent);
+export function ConsentForm({ role }: { role: AppRole }) {
   const [disclaimer, setDisclaimer] = useState(false);
   const [data, setData] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [saving, startSaving] = useTransition();
 
   const terms = role === "doctor" ? DOCTOR_TERMS : PATIENT_TERMS;
 
@@ -68,16 +67,30 @@ export function ConsentForm() {
         />
       </div>
 
+      {error && (
+        <p role="alert" className="mt-4 text-sm text-danger">
+          {error}
+        </p>
+      )}
       <Button
         size="lg"
         className="mt-8 w-full"
-        disabled={!disclaimer || !data}
-        onClick={() => {
-          acceptConsent();
-          router.push(nextStepFor(useSession.getState()));
-        }}
+        disabled={!disclaimer || !data || saving}
+        onClick={() =>
+          startSaving(async () => {
+            // Redirects to the app (or verification page for doctors) on success.
+            const result = await acceptConsentAction();
+            if (result?.error) setError(result.error);
+          })
+        }
       >
-        Accept and continue
+        {saving ? (
+          <>
+            <Loader2 className="animate-spin" /> Saving…
+          </>
+        ) : (
+          "Accept and continue"
+        )}
       </Button>
     </>
   );

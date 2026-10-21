@@ -96,7 +96,7 @@ export function Checkout({
   onSuccess: (result: PaymentResult) => void;
   onCancel: (reason?: "slot") => void;
 }) {
-  const schedule = useDoctorSchedule(doctor.id, doctor.availability);
+  const schedule = useDoctorSchedule(doctor.id, doctor.availability, doctor.schedule);
   const [stage, setStage] = useState<Stage>("checking");
   const [checkStep, setCheckStep] = useState(0);
   const [confirmStep, setConfirmStep] = useState(0);

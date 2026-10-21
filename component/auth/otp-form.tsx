@@ -1,59 +1,60 @@
 "use client";
 
-import { LockKeyhole, ShieldCheck } from "lucide-react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { Loader2, ShieldCheck } from "lucide-react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { Button } from "@/component/ui/button";
-import { nextStepFor, useSession } from "@/lib/store/session";
+import { sendOtpAction, verifyOtpAction } from "@/app/actions/authAction";
 import { cn } from "@/lib/utils";
 import { StepHeader } from "./step-header";
 
 const CODE_LENGTH = 6;
-const DEMO_CODE = "123456";
-const EXPIRY_SECONDS = 5 * 60;
+// Match the backend (utils/phoneOtp.ts): codes last 10 minutes, resend after 30 seconds.
+const EXPIRY_SECONDS = 10 * 60;
 const RESEND_SECONDS = 30;
-const MAX_ATTEMPTS = 3;
-const LOCKOUT_SECONDS = 60;
 
 function mmss(seconds: number) {
   const s = Math.max(0, seconds);
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 }
 
-export function OtpForm() {
-  const router = useRouter();
-  const phone = useSession((s) => s.phone);
-  const verify = useSession((s) => s.verify);
-
+/**
+ * The SMS code step. The backend checks the code and limits attempts; on
+ * success the server action signs in with Auth.js and redirects.
+ */
+export function OtpForm({ phone, onChangeNumber }: { phone: string; onChangeNumber: () => void }) {
   const [digits, setDigits] = useState<string[]>(Array(CODE_LENGTH).fill(""));
   const [sentAt, setSentAt] = useState(() => Date.now());
   const [now, setNow] = useState(() => Date.now());
-  const [attempts, setAttempts] = useState(0);
-  const [lockedUntil, setLockedUntil] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [verifying, startVerifying] = useTransition();
+  const [resending, startResending] = useTransition();
   const inputs = useRef<Array<HTMLInputElement | null>>([]);
-
-  useEffect(() => {
-    if (!phone) router.replace("/login");
-  }, [phone, router]);
 
   useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(timer);
   }, []);
 
+  useEffect(() => {
+    inputs.current[0]?.focus();
+  }, []);
+
   const elapsed = Math.floor((now - sentAt) / 1000);
   const expiresIn = EXPIRY_SECONDS - elapsed;
   const resendIn = RESEND_SECONDS - elapsed;
-  const lockRemaining = lockedUntil ? Math.ceil((lockedUntil - now) / 1000) : 0;
-  const locked = lockRemaining > 0;
   const code = digits.join("");
+
+  const clear = () => {
+    setDigits(Array(CODE_LENGTH).fill(""));
+    inputs.current[0]?.focus();
+  };
 
   const setDigit = (index: number, value: string) => {
     const clean = value.replace(/\D/g, "");
+    setError(null);
     if (clean.length > 1) {
-      // Pasted the whole code
+      // Pasted or autofilled the whole code.
       const next = clean.slice(0, CODE_LENGTH).split("");
       setDigits([...next, ...Array(CODE_LENGTH - next.length).fill("")]);
       inputs.current[Math.min(next.length, CODE_LENGTH - 1)]?.focus();
@@ -62,40 +63,40 @@ export function OtpForm() {
     const next = [...digits];
     next[index] = clean;
     setDigits(next);
-    setError(null);
     if (clean && index < CODE_LENGTH - 1) inputs.current[index + 1]?.focus();
   };
 
   const submit = (event: React.FormEvent) => {
     event.preventDefault();
-    if (locked || code.length < CODE_LENGTH) return;
+    if (verifying || code.length < CODE_LENGTH) return;
     if (expiresIn <= 0) {
       setError("This code has expired. Please request a new one.");
       return;
     }
-    if (code !== DEMO_CODE) {
-      const used = attempts + 1;
-      setAttempts(used);
-      setDigits(Array(CODE_LENGTH).fill(""));
-      inputs.current[0]?.focus();
-      if (used >= MAX_ATTEMPTS) {
-        setLockedUntil(Date.now() + LOCKOUT_SECONDS * 1000);
-        setAttempts(0);
-        setError("Too many incorrect attempts. Please wait before trying again.");
-      } else {
-        setError(`Incorrect code. ${MAX_ATTEMPTS - used} attempt${MAX_ATTEMPTS - used === 1 ? "" : "s"} left.`);
+    setNotice(null);
+    startVerifying(async () => {
+      // Redirects on success; only returns when something went wrong.
+      const result = await verifyOtpAction(phone, code);
+      if (result?.error) {
+        setError(result.error);
+        clear();
       }
-      return;
-    }
-    verify();
-    router.push(nextStepFor({ ...useSession.getState(), verified: true }));
+    });
   };
 
   const resend = () => {
-    setSentAt(Date.now());
-    setNow(Date.now());
-    setDigits(Array(CODE_LENGTH).fill(""));
     setError(null);
+    startResending(async () => {
+      const result = await sendOtpAction(phone);
+      if ("error" in result) {
+        setError(result.error);
+        return;
+      }
+      setSentAt(Date.now());
+      setNow(Date.now());
+      setNotice("A new code is on its way.");
+      clear();
+    });
   };
 
   return (
@@ -105,17 +106,20 @@ export function OtpForm() {
         description={
           <>
             We sent a 6-digit code to <span className="font-medium text-foreground">{phone}</span>.{" "}
-            <Link href="/login" className="text-primary hover:underline">
+            <button type="button" onClick={onChangeNumber} className="text-primary hover:underline">
               Change
-            </Link>
+            </button>
           </>
         }
       />
       <form onSubmit={submit} className="space-y-6">
-        <div className="flex justify-between gap-2" onPaste={(e) => {
-          e.preventDefault();
-          setDigit(0, e.clipboardData.getData("text"));
-        }}>
+        <div
+          className="flex justify-between gap-2"
+          onPaste={(e) => {
+            e.preventDefault();
+            setDigit(0, e.clipboardData.getData("text"));
+          }}
+        >
           {digits.map((digit, i) => (
             <input
               key={i}
@@ -123,10 +127,11 @@ export function OtpForm() {
                 inputs.current[i] = el;
               }}
               value={digit}
-              disabled={locked}
+              disabled={verifying}
               inputMode="numeric"
               autoComplete={i === 0 ? "one-time-code" : "off"}
               aria-label={`Digit ${i + 1}`}
+              aria-invalid={!!error}
               maxLength={CODE_LENGTH}
               onChange={(e) => setDigit(i, e.target.value)}
               onKeyDown={(e) => {
@@ -140,17 +145,23 @@ export function OtpForm() {
           ))}
         </div>
 
-        {locked ? (
-          <div className="flex items-center gap-3 rounded-2xl bg-danger-soft p-4 text-sm text-danger">
-            <LockKeyhole className="size-5 shrink-0" />
-            Temporarily locked for security. Try again in {mmss(lockRemaining)}.
-          </div>
-        ) : (
-          error && <p className="text-sm text-danger">{error}</p>
+        {error && (
+          <p role="alert" className="text-sm text-danger">
+            {error}
+          </p>
         )}
+        {notice && !error && <p className="text-sm text-success">{notice}</p>}
 
-        <Button type="submit" size="lg" className="w-full" disabled={locked || code.length < CODE_LENGTH}>
-          <ShieldCheck /> Verify
+        <Button type="submit" size="lg" className="w-full" disabled={verifying || code.length < CODE_LENGTH}>
+          {verifying ? (
+            <>
+              <Loader2 className="animate-spin" /> Verifying…
+            </>
+          ) : (
+            <>
+              <ShieldCheck /> Verify
+            </>
+          )}
         </Button>
 
         <div className="flex items-center justify-between text-sm">
@@ -160,16 +171,12 @@ export function OtpForm() {
           <button
             type="button"
             onClick={resend}
-            disabled={resendIn > 0 || locked}
+            disabled={resendIn > 0 || resending || verifying}
             className="font-medium text-primary disabled:text-muted-foreground"
           >
-            {resendIn > 0 ? `Resend in ${resendIn}s` : "Resend code"}
+            {resending ? "Sending…" : resendIn > 0 ? `Resend in ${resendIn}s` : "Resend code"}
           </button>
         </div>
-
-        <p className="rounded-2xl bg-surface-2 p-3 text-center text-xs text-muted-foreground">
-          Demo: use code <span className="font-mono font-semibold text-foreground">{DEMO_CODE}</span>
-        </p>
       </form>
     </>
   );
