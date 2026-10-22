@@ -7,7 +7,7 @@ import { Button } from "@/component/ui/button";
 import { Field, Input, Select, Switch, Textarea } from "@/component/ui/field";
 import { SLOT_LENGTHS, TIME_OPTIONS, toMinutes, WEEKDAYS_SHORT } from "@/lib/availability";
 import { completeDoctorOnboarding } from "@/app/actions/profileAction";
-import { REGION_LIST, regionalFee } from "@/lib/locale/regions";
+import { usePricing } from "@/lib/store/pricing";
 import type { DoctorProfileDraft } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { StepHeader } from "./step-header";
@@ -94,6 +94,7 @@ export function ChipInput({ values, onChange, placeholder }: { values: string[];
 }
 
 export function DoctorOnboarding({ fullName }: { fullName: string }) {
+  const { regions, fee } = usePricing();
   const [step, setStep] = useState(1);
   const [error, setError] = useState<string | null>(null);
   const [documentError, setDocumentError] = useState<string | null>(null);
@@ -330,10 +331,10 @@ export function DoctorOnboarding({ fullName }: { fullName: string }) {
               <div className="rounded-2xl border border-border bg-surface p-4">
                 <p className="mb-3 text-sm font-medium text-foreground">What patients will pay</p>
                 <dl className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
-                  {REGION_LIST.map((region) => (
+                  {regions.map((region) => (
                     <div key={region.id} className="flex justify-between gap-2">
                       <dt className="text-muted-foreground">{region.name}</dt>
-                      <dd className="font-medium text-foreground">{regionalFee(form.feeGBP, region.id).label}</dd>
+                      <dd className="font-medium text-foreground">{fee(form.feeGBP, region.id).label}</dd>
                     </div>
                   ))}
                 </dl>

@@ -1,20 +1,14 @@
-import { adCreatives } from "@/lib/mock/engagement";
+import type { AdCreative } from "@/lib/types";
 
-// Ad placement rules (BRD F1, F3). Admin will control these from the panel later.
+// Ad slots in the app (BRD F1, F3). Which ad shows where is set in the admin
+// dashboard; the backend picks the live ad with the highest priority per slot.
+
 export type AdSlot = "home" | "learn-feed" | "article-end" | "doctors-feed" | "doctor-dashboard";
 
-export const AD_PLACEMENTS: Record<AdSlot, { enabled: boolean; creativeIndex: number }> = {
-  home: { enabled: true, creativeIndex: 0 },
-  "learn-feed": { enabled: true, creativeIndex: 1 },
-  "article-end": { enabled: true, creativeIndex: 3 },
-  "doctors-feed": { enabled: true, creativeIndex: 2 },
-  "doctor-dashboard": { enabled: false, creativeIndex: 0 },
-};
+export const AD_SLOTS: AdSlot[] = ["home", "learn-feed", "article-end", "doctors-feed", "doctor-dashboard"];
+
+/** The ad for each slot, or null when nothing is live there. */
+export type ServedAds = Partial<Record<AdSlot, AdCreative | null>>;
 
 /** Show at most one ad per this many feed items so ads never crowd out content. */
 export const FEED_AD_FREQUENCY = 6;
-
-export function adFor(slot: AdSlot) {
-  const placement = AD_PLACEMENTS[slot];
-  return placement.enabled ? adCreatives[placement.creativeIndex % adCreatives.length] : null;
-}

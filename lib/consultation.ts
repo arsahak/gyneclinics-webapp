@@ -1,8 +1,7 @@
 import { addDays, addHours } from "date-fns";
 import { slotsFor, type DoctorSchedule } from "@/lib/availability";
-import type { RegionId } from "@/lib/locale/regions";
 import { doctors as demoDoctors } from "@/lib/mock/doctors";
-import type { Availability, Consultation, Doctor, DoctorMessaging, PaymentMethodId } from "@/lib/types";
+import type { Availability, Consultation, Doctor, DoctorMessaging } from "@/lib/types";
 
 /**
  * Each doctor chooses how patients reach them (`Doctor.messaging`):
@@ -89,38 +88,6 @@ export const STATE_LABEL: Record<ConsultationState, { label: string; tone: "prim
 export function canStartInstantly(availability: Availability, schedule: DoctorSchedule) {
   return availability === "online" && schedule.instantChat;
 }
-
-export interface PaymentMethod {
-  id: PaymentMethodId;
-  label: string;
-  description: string;
-}
-
-const LOCAL_METHODS: Partial<Record<RegionId, string>> = {
-  south_asia: "bKash, Nagad, UPI and other local wallets",
-  africa: "M-Pesa and mobile money",
-  latin_america: "PIX and local bank transfer",
-  middle_east: "Local cards and bank transfer",
-};
-
-/** Payment options shown per region. The real gateway is chosen by the backend. */
-export function paymentMethodsFor(regionId: RegionId): PaymentMethod[] {
-  const methods: PaymentMethod[] = [
-    { id: "card", label: "Credit or debit card", description: "Visa, Mastercard, Amex" },
-    { id: "wallet", label: "Apple Pay / Google Pay", description: "Pay with your phone" },
-  ];
-  const local = LOCAL_METHODS[regionId];
-  if (local) methods.splice(1, 0, { id: "local", label: "Local payment", description: local });
-  return methods;
-}
-
-/** Local payment providers offered per region (dummy until the gateway is connected). */
-export const LOCAL_PROVIDERS: Partial<Record<RegionId, string[]>> = {
-  south_asia: ["bKash", "Nagad", "Rocket", "UPI"],
-  africa: ["M-Pesa", "MTN MoMo", "Airtel Money"],
-  latin_america: ["PIX", "Mercado Pago"],
-  middle_east: ["Benefit Pay", "STC Pay", "Bank transfer"],
-};
 
 /** Re-checks a slot against the doctor's schedule right before payment. */
 export function isSlotStillAvailable(

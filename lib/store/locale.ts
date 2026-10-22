@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import { defaultLocation, type DetectedLocation } from "@/lib/locale/detect";
 import { REGIONS, regionalFee } from "@/lib/locale/regions";
+import { usePricingStore } from "@/lib/store/pricing";
 
 interface LocaleState {
   /** Where the app was last detected as being opened. Drives regional pricing. */
@@ -38,11 +39,13 @@ export const useLocaleStore = create<LocaleState>()(
 
 export function useRegion() {
   const location = useLocaleStore((state) => state.detected) ?? defaultLocation();
-  return { location, region: REGIONS[location.regionId] };
+  const multiplier = usePricingStore((state) => state.multipliers[location.regionId]);
+  const base = REGIONS[location.regionId];
+  return { location, region: multiplier === undefined ? base : { ...base, multiplier } };
 }
 
-/** Consultation fee for the viewer's detected region. */
+/** Consultation fee for the viewer's detected region, at the live price. */
 export function useRegionalFee(baseFeeGBP: number) {
   const { region } = useRegion();
-  return regionalFee(baseFeeGBP, region.id);
+  return regionalFee(baseFeeGBP, region.id, region.multiplier);
 }

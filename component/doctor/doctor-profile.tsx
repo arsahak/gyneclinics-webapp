@@ -12,7 +12,7 @@ import { Badge } from "@/component/ui/badge";
 import { Button } from "@/component/ui/button";
 import { Card, CardBody, CardHeader } from "@/component/ui/card";
 import { Field, Input, Select, Switch, Textarea } from "@/component/ui/field";
-import { REGION_LIST, regionalFee } from "@/lib/locale/regions";
+import { usePricing } from "@/lib/store/pricing";
 
 // The doctor edits their whole profile here. Only changed fields are sent.
 // For an approved doctor, changes wait for an admin: the doctor sees their
@@ -81,6 +81,7 @@ const STATUS_BADGE = {
 };
 
 export function DoctorProfileView({ profile }: { profile: MyDoctorProfile }) {
+  const { regions, fee } = usePricing();
   const [saved, setSaved] = useState<Form>(() => toForm(profile));
   const [form, setForm] = useState<Form>(() => toForm(profile));
   const [error, setError] = useState<string | null>(null);
@@ -395,10 +396,10 @@ export function DoctorProfileView({ profile }: { profile: MyDoctorProfile }) {
             </Field>
             {form.feeGBP > 0 && (
               <dl className="grid grid-cols-2 gap-x-6 gap-y-1.5 rounded-2xl bg-surface-2 p-4 text-sm">
-                {REGION_LIST.map((r) => (
+                {regions.map((r) => (
                   <div key={r.id} className="flex justify-between gap-2">
                     <dt className="text-muted-foreground">{r.name}</dt>
-                    <dd className="font-medium text-foreground tabular-nums">{regionalFee(form.feeGBP, r.id).label}</dd>
+                    <dd className="font-medium text-foreground tabular-nums">{fee(form.feeGBP, r.id).label}</dd>
                   </div>
                 ))}
               </dl>
@@ -453,6 +454,7 @@ export function DoctorProfileView({ profile }: { profile: MyDoctorProfile }) {
 
 /** The profile as patients and the doctor read it (not editing). */
 function ProfileDetails({ form }: { form: Form }) {
+  const { regions, fee } = usePricing();
   const tags = (values: string[]) =>
     values.length ? (
       <div className="flex flex-wrap gap-1.5">
@@ -536,10 +538,10 @@ function ProfileDetails({ form }: { form: Form }) {
           <p className="text-2xl font-semibold text-foreground">{form.feeGBP > 0 ? `£${form.feeGBP}` : "Free"}</p>
           {form.feeGBP > 0 && (
             <dl className="grid grid-cols-2 gap-x-6 gap-y-1.5 rounded-2xl bg-surface-2 p-4 text-sm">
-              {REGION_LIST.map((r) => (
+              {regions.map((r) => (
                 <div key={r.id} className="flex justify-between gap-2">
                   <dt className="text-muted-foreground">{r.name}</dt>
-                  <dd className="font-medium text-foreground tabular-nums">{regionalFee(form.feeGBP, r.id).label}</dd>
+                  <dd className="font-medium text-foreground tabular-nums">{fee(form.feeGBP, r.id).label}</dd>
                 </div>
               ))}
             </dl>

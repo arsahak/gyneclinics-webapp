@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { PatientConversations } from "@/component/chat/patient-conversations";
 import { PageHeader } from "@/component/shared/page-header";
-import { getDoctors } from "@/lib/services/doctors";
+import { getMyChats } from "@/lib/services/chats";
 
 export const metadata: Metadata = { title: "Messages" };
 
@@ -9,11 +9,11 @@ export const metadata: Metadata = { title: "Messages" };
 export const instant = false;
 
 export default async function PatientMessagesPage() {
-  const doctors = await getDoctors();
+  const chats = await getMyChats("patient");
   return (
     <>
       <PageHeader title="Messages" description="Your private conversations with specialists. Chats open when a consultation starts." />
-      <PatientConversations doctors={doctors} />
+      <PatientConversations chats={chats} />
     </>
   );
 }

@@ -7,7 +7,8 @@ import { Badge } from "@/component/ui/badge";
 import { Button } from "@/component/ui/button";
 import { Card, CardBody, CardHeader } from "@/component/ui/card";
 import { detectLocation, detectPreciseLocation, type LocationSource } from "@/lib/locale/detect";
-import { flagEmoji, REGION_LIST, REGIONS, regionalFee } from "@/lib/locale/regions";
+import { flagEmoji, REGIONS } from "@/lib/locale/regions";
+import { usePricing } from "@/lib/store/pricing";
 import { trackAppOpen } from "@/lib/services/analytics";
 import { useLocaleStore, useRegion } from "@/lib/store/locale";
 
@@ -20,6 +21,7 @@ const SOURCE_LABEL: Record<LocationSource, string> = {
 
 /** Where the app was opened from, which sets the pricing region. */
 export function LocationCard({ sampleFeeGBP = 45 }: { sampleFeeGBP?: number }) {
+  const { regions, fee } = usePricing();
   const { location, region } = useRegion();
   const status = useLocaleStore((s) => s.status);
   const openLog = useLocaleStore((s) => s.openLog);
@@ -78,9 +80,9 @@ export function LocationCard({ sampleFeeGBP = 45 }: { sampleFeeGBP?: number }) {
 
         <div>
           <p className="mb-2 text-sm font-medium text-foreground">Regional consultation fees</p>
-          <p className="mb-3 text-xs text-muted-foreground">Example for a specialist with a {regionalFee(sampleFeeGBP, "europe").label} base fee.</p>
+          <p className="mb-3 text-xs text-muted-foreground">Example for a specialist with a {fee(sampleFeeGBP, "europe").label} base fee.</p>
           <ul className="grid gap-1.5 sm:grid-cols-2">
-            {REGION_LIST.map((r) => (
+            {regions.map((r) => (
               <li
                 key={r.id}
                 className={`flex items-center justify-between rounded-xl px-3 py-2 text-sm ${r.id === region.id ? "bg-surface-2 font-medium text-foreground" : "text-muted-foreground"}`}
@@ -89,7 +91,7 @@ export function LocationCard({ sampleFeeGBP = 45 }: { sampleFeeGBP?: number }) {
                   {r.name}
                   {r.id === region.id && <span className="ml-1.5 text-xs text-primary">(you)</span>}
                 </span>
-                <span className="tabular-nums">{regionalFee(sampleFeeGBP, r.id).label}</span>
+                <span className="tabular-nums">{fee(sampleFeeGBP, r.id).label}</span>
               </li>
             ))}
           </ul>

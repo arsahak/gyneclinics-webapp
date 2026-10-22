@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { DoctorDashboard } from "@/component/doctor/dashboard";
 import { getDemoDoctor, getDemoDoctorReviews } from "@/lib/services/doctors";
-import { getPatientThreads } from "@/lib/services/messaging";
+import { getMyChats } from "@/lib/services/chats";
+import { getMyEarnings } from "@/lib/services/payouts";
 
 export const metadata: Metadata = { title: "Dashboard" };
 
@@ -10,6 +11,6 @@ export const instant = false;
 
 
 export default async function DoctorHome() {
-  const [threads, reviews, doctor] = await Promise.all([getPatientThreads(), getDemoDoctorReviews(), getDemoDoctor()]);
-  return <DoctorDashboard doctorId={doctor!.id} threads={threads} reviews={reviews} />;
+  const [chats, reviews, doctor, earnings] = await Promise.all([getMyChats("doctor"), getDemoDoctorReviews(), getDemoDoctor(), getMyEarnings()]);
+  return <DoctorDashboard doctorId={doctor!.id} chats={chats} reviews={reviews} availableGBP={earnings?.balance.availableGBP ?? null} />;
 }

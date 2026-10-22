@@ -8,7 +8,7 @@ import { Dialog } from "@/component/ui/dialog";
 import { REGIONS, formatMoney, type RegionId } from "@/lib/locale/regions";
 import type { Consultation, Doctor } from "@/lib/types";
 
-const METHOD_LABEL = { card: "Card", local: "Mobile wallet", wallet: "Apple / Google Pay", free: "Free" } as const;
+const METHOD_LABEL = { card: "Card", local: "Other method", wallet: "Apple / Google Pay", free: "Free" } as const;
 
 export function ReceiptDialog({
   consultation,

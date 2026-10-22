@@ -26,6 +26,15 @@ const ICONS: Record<string, LucideIcon> = {
 
 export function ArticleCover({ article, className, iconSize = "size-10" }: { article: Article; className?: string; iconSize?: string }) {
   const Icon = ICONS[article.cover.icon] ?? BookOpenText;
+  if (article.image) {
+    return (
+      <div className={cn("relative overflow-hidden bg-surface-2", className)}>
+        {/* Any https image link can be used, so not next/image (which needs known hosts). */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={article.image} alt="" className="absolute inset-0 size-full object-cover" loading="lazy" />
+      </div>
+    );
+  }
   return (
     <div
       className={cn("relative flex items-center justify-center overflow-hidden", className)}

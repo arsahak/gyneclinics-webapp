@@ -1,5 +1,6 @@
 import "server-only";
 import { api } from "@/lib/api";
+import { hueFor } from "@/lib/chat";
 import type { DoctorSchedule } from "@/lib/availability";
 import { DEMO_DOCTOR_ID, doctors as demoDoctors, reviews as demoReviews } from "@/lib/mock/doctors";
 import type { Availability, Doctor, DoctorMessaging, Review } from "@/lib/types";
@@ -32,12 +33,6 @@ interface BackendDoctor {
   recommended?: boolean;
 }
 
-/** A stable avatar colour per doctor. */
-function hueFor(id: string) {
-  let hash = 0;
-  for (const char of id) hash = (hash * 31 + char.charCodeAt(0)) >>> 0;
-  return hash % 360;
-}
 
 /** Online now, working today, working later this week, or away. */
 function availabilityFor(doctor: BackendDoctor): Availability {
@@ -96,10 +91,41 @@ export async function getDoctor(id: string): Promise<Doctor | undefined> {
   return result.ok && result.data ? toDoctor(result.data) : undefined;
 }
 
-/** Reviews aren't stored on the backend yet. */
-export async function getDoctorReviews(doctorId: string): Promise<Review[]> {
-  void doctorId;
-  return [];
+/** The signed-in patient's own review of a doctor (shown even while it waits for a check). */
+export interface MyReview {
+  id: string;
+  rating: number;
+  text: string;
+  status: "published" | "held" | "hidden";
+  date: string;
+}
+
+interface BackendReview {
+  _id: string;
+  rating: number;
+  text: string;
+  createdAt: string;
+  author?: string;
+  status?: MyReview["status"];
+}
+
+/** A doctor's published reviews (GET /reviews/doctor/:id), plus your own. Authors are anonymous. */
+export async function getDoctorReviews(doctorId: string): Promise<{ reviews: Review[]; mine: MyReview | null }> {
+  if (!/^[a-f\d]{24}$/i.test(doctorId)) return { reviews: [], mine: null };
+  const result = await api<{ reviews: BackendReview[]; mine: BackendReview | null }>(`/reviews/doctor/${doctorId}?limit=50`);
+  if (!result.ok || !result.data) return { reviews: [], mine: null };
+  const mine = result.data.mine;
+  return {
+    reviews: result.data.reviews.map((r) => ({
+      id: r._id,
+      doctorId,
+      author: r.author ?? "Verified patient",
+      rating: r.rating,
+      text: r.text,
+      date: r.createdAt,
+    })),
+    mine: mine ? { id: mine._id, rating: mine.rating, text: mine.text, status: mine.status ?? "published", date: mine.createdAt } : null,
+  };
 }
 
 // ── Doctor app (still demo data until the doctor side uses the backend) ─────

@@ -8,20 +8,15 @@ import { EmptyState } from "@/component/shared/empty-state";
 import { Avatar } from "@/component/ui/avatar";
 import { Badge } from "@/component/ui/badge";
 import { ButtonLink } from "@/component/ui/button";
-import { useChat } from "@/lib/store/chat";
+import type { ChatSummary } from "@/lib/chat";
 import type { Role } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
-export interface ConversationSummary {
-  id: string;
-  name: string;
-  hue: number;
-  avatar?: string;
-  subtitle: string;
+export interface ConversationSummary extends ChatSummary {
   badge?: { label: string; tone: ComponentProps<typeof Badge>["tone"] };
 }
 
-/** Conversation list for either side. Only conversations with messages are shown. */
+/** Conversation list for either side, from the backend. Only chats with messages are listed. */
 export function ConversationList({
   me,
   people,
@@ -33,16 +28,10 @@ export function ConversationList({
   basePath: string;
   emptyAction?: { href: string; label: string };
 }) {
-  const conversations = useChat((s) => s.conversations);
   const rows = people
-    .map((person) => {
-      const messages = conversations[person.id] ?? [];
-      const last = messages.at(-1);
-      const awaitingReply = last && last.from !== me;
-      return { person, last, awaitingReply };
-    })
-    .filter((row) => row.last)
-    .sort((a, b) => b.last!.at.localeCompare(a.last!.at));
+    .filter((person) => person.lastAt)
+    .map((person) => ({ person, awaitingReply: person.lastFrom !== me && person.unread > 0 }))
+    .sort((a, b) => b.person.lastAt!.localeCompare(a.person.lastAt!));
 
   if (!rows.length) {
     return (
@@ -57,8 +46,8 @@ export function ConversationList({
 
   return (
     <ul className="divide-y divide-border overflow-hidden rounded-3xl border border-border bg-surface">
-      {rows.map(({ person, last, awaitingReply }) => {
-        const at = parseISO(last!.at);
+      {rows.map(({ person, awaitingReply }) => {
+        const at = parseISO(person.lastAt!);
         return (
           <li key={person.id}>
             <Link href={`${basePath}/${person.id}`} className="flex items-center gap-4 p-4 transition-colors hover:bg-surface-2 sm:px-6">
@@ -71,11 +60,15 @@ export function ConversationList({
                 <p className="truncate text-xs text-muted-foreground">{person.subtitle}</p>
                 <div className="mt-1 flex items-center gap-2">
                   <p className={cn("min-w-0 flex-1 truncate text-sm", awaitingReply ? "text-foreground" : "text-muted-foreground")}>
-                    {last!.from === me && "You: "}
-                    {last!.text}
+                    {person.lastFrom === me && "You: "}
+                    {person.lastText}
                   </p>
                   {person.badge && <Badge tone={person.badge.tone}>{person.badge.label}</Badge>}
-                  {awaitingReply && <span className="size-2.5 shrink-0 rounded-full bg-accent" aria-label="Unread" />}
+                  {awaitingReply && (
+                    <span className="inline-flex min-w-5 shrink-0 items-center justify-center rounded-full bg-accent px-1.5 text-[11px] font-semibold text-white" aria-label={`${person.unread} unread`}>
+                      {person.unread}
+                    </span>
+                  )}
                 </div>
               </div>
             </Link>

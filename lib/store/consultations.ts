@@ -32,7 +32,8 @@ function newReference() {
 
 interface ConsultationState {
   consultations: Consultation[];
-  book: (consultation: Omit<Consultation, "id" | "bookedAt">) => Consultation;
+  /** Adds a booking. `saved` keeps the backend's reference when it made one (paid bookings). */
+  book: (consultation: Omit<Consultation, "id" | "bookedAt">, saved?: { id: string; bookedAt: string }) => Consultation;
   complete: (id: string) => void;
 }
 
@@ -40,11 +41,11 @@ export const useConsultations = create<ConsultationState>()(
   persist(
     (set) => ({
       consultations: seed,
-      book: (input) => {
+      book: (input, saved) => {
         const consultation: Consultation = {
           ...input,
-          id: newReference(),
-          bookedAt: new Date().toISOString(),
+          id: saved?.id ?? newReference(),
+          bookedAt: saved?.bookedAt ?? new Date().toISOString(),
         };
         set((s) => ({ consultations: [consultation, ...s.consultations] }));
         return consultation;

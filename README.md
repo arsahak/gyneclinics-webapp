@@ -75,11 +75,15 @@ One rule: **chatting with a doctor is a consultation.** Policy values live in `l
 4. After that the chat is read-only; **Book again** starts a new consultation.
 5. Full refund if the doctor doesn't reply within **12 hours**.
 
-Checkout (`component/booking/checkout.tsx`) is a dummy of the real sequence: **schedule check** (slot
-re-checked and held for 10 minutes) → **payment** (card, local mobile wallet with OTP, or Apple/Google Pay)
-→ **consultation confirmation** → receipt. Test card `4242 4242 4242 4242` succeeds, `4000 0000 0000 0002`
-is declined; wallet OTP is `123456`.
+Checkout (`component/booking/checkout.tsx`) takes real payments through **Stripe**: **schedule check** (slot
+re-checked and held for 10 minutes) → the backend prices the booking and opens a Stripe PaymentIntent
+(`POST /consultations/checkout`) → the patient pays in Stripe's Payment Element (card, Apple Pay, Google Pay,
+Link) → the backend checks the payment with Stripe and saves the booking (`…/confirm`; the Stripe webhook
+does the same if the page was closed) → receipt. In test mode use card `4242 4242 4242 4242` (success) or
+`4000 0000 0000 0002` (declined).
 
-Free cases: follow-up messages, consultations with a fee of 0 (set by admin for promos — see Dr. Farah
-Siddiqui in the mock data), and platform support. Payment is mocked; the backend should redirect to a
-hosted checkout (e.g. Stripe / SSLCommerz) and create the booking only on the gateway's success webhook.
+Free cases: follow-up messages, consultations with a fee of 0 (set by admin for promos), and platform
+support. Free bookings skip Stripe (`POST /consultations`).
+
+Doctors are paid with **Stripe Connect**: they set up a Stripe Express account from Earnings, ask to
+withdraw cleared money, and a super admin sends it from the dashboard (a Stripe transfer).

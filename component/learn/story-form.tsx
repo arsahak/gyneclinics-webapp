@@ -1,62 +1,50 @@
 "use client";
 
-import { format, parseISO } from "date-fns";
 import Image from "next/image";
-import { CheckCircle2, Clock, ImagePlus, PenLine, X, XCircle } from "lucide-react";
-import { useState } from "react";
-import { useAccount } from "@/component/shared/account-provider";
+import { CheckCircle2, ImagePlus, Loader2, PenLine, X } from "lucide-react";
+import { useEffect, useMemo, useState, useTransition } from "react";
+import { submitStoryAction } from "@/app/actions/storyAction";
 import { Disclaimer } from "@/component/shared/disclaimer";
-import { Badge } from "@/component/ui/badge";
-import { Button } from "@/component/ui/button";
+import { Button, ButtonLink } from "@/component/ui/button";
 import { Card } from "@/component/ui/card";
 import { Checkbox, Field, Input, Select, Textarea } from "@/component/ui/field";
 import { describeBlocked, scanForContactDetails } from "@/lib/chat-guard";
-import { useLibrary } from "@/lib/store/library";
-import type { ArticleCategory, StoryStatus } from "@/lib/types";
+import type { ArticleCategory } from "@/lib/types";
 
-const STATUS: Record<StoryStatus, { label: string; tone: "warning" | "success" | "danger"; icon: typeof Clock }> = {
-  pending: { label: "Awaiting review", tone: "warning", icon: Clock },
-  approved: { label: "Published", tone: "success", icon: CheckCircle2 },
-  rejected: { label: "Not approved", tone: "danger", icon: XCircle },
-};
 
-const MAX_IMAGE_BYTES = 1_000_000;
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 
+/** Share a story (sent to our team for review) and see your earlier ones. */
 export function StoryForm({ categories }: { categories: ArticleCategory[] }) {
-  const { stories, submitStory } = useLibrary();
-  const authorName = useAccount().fullName || "Community member";
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [category, setCategory] = useState<ArticleCategory>(categories[0]);
   const [anonymous, setAnonymous] = useState(true);
-  const [imageDataUrl, setImageDataUrl] = useState<string | null>(null);
+  const [image, setImage] = useState<File | null>(null);
   const [imageError, setImageError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
+  const [sending, startSending] = useTransition();
+
+  // Local preview of the chosen photo, freed when it changes.
+  const imagePreview = useMemo(() => (image ? URL.createObjectURL(image) : null), [image]);
+  useEffect(() => () => void (imagePreview && URL.revokeObjectURL(imagePreview)), [imagePreview]);
 
   const blocked = scanForContactDetails(`${title} ${body}`);
-  const valid = title.trim().length >= 5 && body.trim().length >= 80 && blocked.length === 0 && !imageError;
+  const valid = title.trim().length >= 5 && body.trim().length > 0 && blocked.length === 0 && !imageError && !sending;
 
   function chooseImage(file: File | undefined) {
     setImageError(null);
-    if (!file) {
-      setImageDataUrl(null);
-      return;
-    }
+    if (!file) return setImage(null);
     if (!file.type.match(/^image\/(jpeg|png|webp)$/)) {
-      setImageDataUrl(null);
-      setImageError("Choose a JPG, PNG or WebP image.");
-      return;
+      setImage(null);
+      return setImageError("Choose a JPG, PNG or WebP image.");
     }
     if (file.size > MAX_IMAGE_BYTES) {
-      setImageDataUrl(null);
-      setImageError("Choose an image smaller than 1 MB.");
-      return;
+      setImage(null);
+      return setImageError("Choose an image smaller than 5 MB.");
     }
-
-    const reader = new FileReader();
-    reader.onload = () => setImageDataUrl(typeof reader.result === "string" ? reader.result : null);
-    reader.onerror = () => setImageError("We couldn't read that image. Please try another one.");
-    reader.readAsDataURL(file);
+    setImage(file);
   }
 
   return (
@@ -71,9 +59,12 @@ export function StoryForm({ categories }: { categories: ArticleCategory[] }) {
             <p className="mx-auto mt-2 max-w-sm text-sm text-muted-foreground">
               Our team will review your story before it&apos;s published. We&apos;ll let you know once it&apos;s live.
             </p>
-            <Button variant="outline" className="mt-6" onClick={() => setDone(false)}>
-              Write another
-            </Button>
+            <div className="mt-6 flex flex-wrap justify-center gap-3">
+              <ButtonLink href="/patient/learn/share-story">See community stories</ButtonLink>
+              <Button variant="outline" onClick={() => setDone(false)}>
+                Write another
+              </Button>
+            </div>
           </div>
         ) : (
           <form
@@ -81,11 +72,21 @@ export function StoryForm({ categories }: { categories: ArticleCategory[] }) {
             onSubmit={(e) => {
               e.preventDefault();
               if (!valid) return;
-              submitStory({ title: title.trim(), body: body.trim(), category, anonymous, authorName, imageDataUrl: imageDataUrl ?? undefined });
-              setTitle("");
-              setBody("");
-              setImageDataUrl(null);
-              setDone(true);
+              setError(null);
+              const data = new FormData();
+              data.append("title", title.trim());
+              data.append("body", body.trim());
+              data.append("topic", category);
+              data.append("anonymous", String(anonymous));
+              if (image) data.append("image", image);
+              startSending(async () => {
+                const result = await submitStoryAction(data);
+                if (result.error) return setError(result.error);
+                setTitle("");
+                setBody("");
+                setImage(null);
+                setDone(true);
+              });
             }}
           >
             <Field label="Title" htmlFor="title">
@@ -101,7 +102,6 @@ export function StoryForm({ categories }: { categories: ArticleCategory[] }) {
             <Field
               label="Your story"
               htmlFor="body"
-              hint={`${body.trim().length}/80 characters minimum`}
               error={blocked.length ? describeBlocked(blocked) : undefined}
             >
               <Textarea id="body" value={body} onChange={(e) => setBody(e.target.value)} className="min-h-56" placeholder="Share your experience in your own words…" />
@@ -109,7 +109,7 @@ export function StoryForm({ categories }: { categories: ArticleCategory[] }) {
             <Field
               label={<span className="inline-flex items-center gap-1.5"><ImagePlus className="size-4 text-primary" /> Add a photo (optional)</span>}
               htmlFor="story-image"
-              hint="JPG, PNG or WebP · maximum 1 MB"
+              hint="JPG, PNG or WebP · maximum 5 MB"
               error={imageError ?? undefined}
             >
               <Input
@@ -120,14 +120,14 @@ export function StoryForm({ categories }: { categories: ArticleCategory[] }) {
                 className="cursor-pointer py-2 file:mr-3 file:rounded-full file:border-0 file:bg-primary-soft file:px-3 file:py-1 file:text-xs file:font-medium file:text-primary"
               />
             </Field>
-            {imageDataUrl && (
+            {imagePreview && (
               <div className="relative overflow-hidden rounded-2xl border border-border bg-surface-2">
-                <Image src={imageDataUrl} alt="Selected story image" width={960} height={640} unoptimized className="max-h-64 w-full object-cover" />
+                <Image src={imagePreview} alt="Selected story image" width={960} height={640} unoptimized className="max-h-64 w-full object-cover" />
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() => setImageDataUrl(null)}
+                  onClick={() => setImage(null)}
                   className="absolute top-3 right-3 bg-surface/90"
                 >
                   <X /> Remove
@@ -135,8 +135,21 @@ export function StoryForm({ categories }: { categories: ArticleCategory[] }) {
               </div>
             )}
             <Checkbox checked={anonymous} onChange={(e) => setAnonymous(e.target.checked)} label="Publish anonymously" description="Your name won't be shown with your story." />
+            {error && (
+              <p role="alert" className="rounded-2xl bg-danger-soft p-3 text-sm text-danger">
+                {error}
+              </p>
+            )}
             <Button type="submit" variant="secondary" size="lg" className="w-full" disabled={!valid}>
-              <PenLine /> Submit for review
+              {sending ? (
+                <>
+                  <Loader2 className="animate-spin" /> Sending…
+                </>
+              ) : (
+                <>
+                  <PenLine /> Submit for review
+                </>
+              )}
             </Button>
           </form>
         )}
@@ -146,28 +159,13 @@ export function StoryForm({ categories }: { categories: ArticleCategory[] }) {
         <Disclaimer>
           Stories and photos are reviewed by our team before publishing. Please don&apos;t include names, contact details or anything that could identify you or others.
         </Disclaimer>
-        <Card className="p-5">
-          <h2 className="font-semibold text-foreground">Your submissions</h2>
-          {stories.length === 0 ? (
-            <p className="mt-2 text-sm text-muted-foreground">You haven&apos;t shared a story yet.</p>
-          ) : (
-            <ul className="mt-3 space-y-3">
-              {stories.map((story) => {
-                const s = STATUS[story.status];
-                return (
-                  <li key={story.id} className="rounded-2xl bg-surface-2 p-3">
-                    <p className="line-clamp-1 text-sm font-medium text-foreground">{story.title}</p>
-                    <div className="mt-1.5 flex items-center justify-between gap-2">
-                      <Badge tone={s.tone}>
-                        <s.icon /> {s.label}
-                      </Badge>
-                      <span className="text-xs text-muted-foreground">{format(parseISO(story.submittedAt), "d MMM")}</span>
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
+        <Card className="p-5 text-sm">
+          <h2 className="font-semibold text-foreground">Tips for a helpful story</h2>
+          <ul className="mt-2 list-disc space-y-1.5 pl-5 text-muted-foreground">
+            <li>Share what happened and how you felt.</li>
+            <li>Say what helped you, or what you wish you&apos;d known.</li>
+            <li>Leave out names, places and contact details.</li>
+          </ul>
         </Card>
       </div>
     </div>

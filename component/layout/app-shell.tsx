@@ -1,11 +1,12 @@
 "use client";
 
-import { BookOpenText, CalendarCheck, CalendarClock, CalendarDays, ChartSpline, House, LayoutDashboard, LogOut, MessagesSquare, PenLine, Star, Stethoscope, UserRound, Video, type LucideIcon } from "lucide-react";
+import { Bell, BookOpenText, CalendarCheck, CalendarClock, CalendarDays, ChartSpline, House, LayoutDashboard, LogOut, MessagesSquare, PenLine, Star, Stethoscope, UserRound, Video, Wallet, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import { useAccount } from "@/component/shared/account-provider";
 import { Logo } from "@/component/shared/logo";
+import { NotificationBell, NotificationPoller, NotificationToasts, UnreadBadge } from "@/component/shared/notification-bell";
 import { RegionChip } from "@/component/shared/region";
 import { ThemeToggle } from "@/component/shared/theme-toggle";
 import { Avatar } from "@/component/ui/avatar";
@@ -35,6 +36,7 @@ const NAV: Record<Role, NavItem[]> = {
     { href: "/patient/doctors", label: "Get help", icon: Stethoscope, mobile: true },
     { href: "/patient/consultations", label: "Consultations", icon: CalendarCheck },
     { href: "/patient/messages", label: "Messages", icon: MessagesSquare },
+    { href: "/patient/notifications", label: "Notifications", icon: Bell },
     { href: "/patient/test-call", label: "Test call", icon: Video },
     { href: "/patient/profile", label: "Profile", icon: UserRound, mobile: true },
   ],
@@ -42,6 +44,8 @@ const NAV: Record<Role, NavItem[]> = {
     { href: "/doctor", label: "Dashboard", icon: LayoutDashboard, mobile: true },
     { href: "/doctor/availability", label: "Availability", icon: CalendarClock, mobile: true },
     { href: "/doctor/messages", label: "Messages", icon: MessagesSquare, mobile: true },
+    { href: "/doctor/notifications", label: "Notifications", icon: Bell },
+    { href: "/doctor/earnings", label: "Earnings", icon: Wallet },
     { href: "/doctor/test-call", label: "Test call", icon: Video },
     { href: "/doctor/reviews", label: "Reviews", icon: Star, mobile: true },
     { href: "/doctor/profile", label: "Profile", icon: UserRound, mobile: true },
@@ -69,6 +73,12 @@ export function AppShell({ role, children }: { role: Role; children: ReactNode }
 
   return (
     <div className="flex min-h-full flex-1">
+      {!pending && (
+        <>
+          <NotificationPoller />
+          <NotificationToasts />
+        </>
+      )}
       {/* Desktop sidebar */}
       <aside className="sticky top-0 hidden h-dvh w-64 shrink-0 flex-col border-r border-white/10 bg-gradient-to-b from-[#174f57] via-[#123b52] to-[#0a2342] lg:flex">
         <div className="flex h-16 items-center px-6">
@@ -91,6 +101,7 @@ export function AppShell({ role, children }: { role: Role; children: ReactNode }
               >
                 <Icon className="size-5" />
                 {label}
+                {href.endsWith("/notifications") && <UnreadBadge className="ml-auto" />}
               </Link>
             );
           })}
@@ -129,6 +140,7 @@ export function AppShell({ role, children }: { role: Role; children: ReactNode }
           <div className="flex items-center gap-1">
             <RegionChip className="hidden sm:inline-flex" />
             <ThemeToggle />
+            {!pending && <NotificationBell href={`${home}/notifications`} />}
             {!pending && (
               <Link
                 href={`${home}/messages`}

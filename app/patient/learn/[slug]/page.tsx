@@ -6,16 +6,15 @@ import { notFound } from "next/navigation";
 import { ArticleCard } from "@/component/learn/article-card";
 import { ArticleCover } from "@/component/learn/article-cover";
 import { BookmarkButton } from "@/component/learn/bookmark-button";
-import { CommunityStoryArticle } from "@/component/learn/community-story-article";
 import { AdBanner } from "@/component/shared/ad-banner";
 import { Disclaimer } from "@/component/shared/disclaimer";
 import { Badge } from "@/component/ui/badge";
 import { ButtonLink } from "@/component/ui/button";
-import { getArticle, getArticles, listArticleSlugs } from "@/lib/services/content";
+import { getArticle, getArticles } from "@/lib/services/content";
 
-export function generateStaticParams() {
-  return listArticleSlugs().map((slug) => ({ slug }));
-}
+/** Typography for the article HTML from the backend (matches the section layout). */
+const ARTICLE_HTML =
+  "[&_a]:text-primary [&_a]:underline [&_blockquote]:border-l-4 [&_blockquote]:border-primary/30 [&_blockquote]:pl-4 [&_blockquote]:italic [&_h1]:font-serif [&_h1]:text-3xl [&_h1]:font-semibold [&_h1]:text-foreground [&_h2]:mt-8 [&_h2]:mb-2 [&_h2]:font-serif [&_h2]:text-2xl [&_h2]:font-semibold [&_h2]:text-foreground [&_h3]:mt-6 [&_h3]:mb-2 [&_h3]:text-xl [&_h3]:font-semibold [&_h3]:text-foreground [&_img]:my-6 [&_img]:rounded-2xl [&_li]:my-1 [&_ol]:list-decimal [&_ol]:pl-6 [&_p]:my-4 [&_strong]:font-semibold [&_strong]:text-foreground [&_table]:w-full [&_td]:border [&_td]:border-border [&_td]:p-2 [&_th]:border [&_th]:border-border [&_th]:p-2 [&_ul]:list-disc [&_ul]:pl-6";
 
 export const metadata: Metadata = { title: "Article" };
 
@@ -25,11 +24,7 @@ export const instant = false;
 export default async function ArticlePage({ params }: PageProps<"/patient/learn/[slug]">) {
   const { slug } = await params;
   const article = await getArticle(slug);
-  if (!article) {
-    // Community stories are stored in the browser until a real content API is connected.
-    if (slug.startsWith("community-")) return <CommunityStoryArticle slug={slug} />;
-    notFound();
-  }
+  if (!article) notFound();
 
   const others = (await getArticles()).filter((a) => a.slug !== slug);
   const related = [
@@ -65,13 +60,18 @@ export default async function ArticlePage({ params }: PageProps<"/patient/learn/
       </div>
 
       <div className="mt-8 space-y-6 text-[17px] leading-relaxed text-foreground/90">
-        <p className="text-lg text-muted-foreground">{article.excerpt}</p>
-        {article.sections.map((section, i) => (
-          <section key={i}>
-            {section.heading && <h2 className="mb-2 font-serif text-2xl font-semibold text-foreground">{section.heading}</h2>}
-            <p>{section.body}</p>
-          </section>
-        ))}
+        {article.excerpt && <p className="text-lg text-muted-foreground">{article.excerpt}</p>}
+        {article.html ? (
+          // Cleaned on the backend when it was saved (scripts, handlers and unsafe links removed).
+          <div className={ARTICLE_HTML} dangerouslySetInnerHTML={{ __html: article.html }} />
+        ) : (
+          article.sections.map((section, i) => (
+            <section key={i}>
+              {section.heading && <h2 className="mb-2 font-serif text-2xl font-semibold text-foreground">{section.heading}</h2>}
+              <p>{section.body}</p>
+            </section>
+          ))
+        )}
       </div>
 
       <Disclaimer className="mt-10">

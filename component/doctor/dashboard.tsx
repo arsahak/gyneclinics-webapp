@@ -1,7 +1,7 @@
 "use client";
 
 import { format, parseISO } from "date-fns";
-import { ArrowRight, BadgeCheck, Bell, CalendarClock, Clock, MessagesSquare, Star, TrendingUp, Wallet } from "lucide-react";
+import { ArrowRight, BadgeCheck, CalendarClock, Clock, MessagesSquare, Star, TrendingUp, Wallet } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { Stars } from "@/component/doctors/rating";
@@ -10,17 +10,19 @@ import { Avatar } from "@/component/ui/avatar";
 import { Badge } from "@/component/ui/badge";
 import { Card, CardBody, CardHeader } from "@/component/ui/card";
 import { Switch } from "@/component/ui/field";
-import { formatMoney, REGION_LIST, regionalFee } from "@/lib/locale/regions";
+import { formatMoney } from "@/lib/locale/regions";
+import { usePricing } from "@/lib/store/pricing";
 import { STATE_LABEL, timeline } from "@/lib/consultation";
-import { useChat } from "@/lib/store/chat";
 import { useConsultations } from "@/lib/store/consultations";
-import type { PatientThread, Review } from "@/lib/types";
+import type { ChatSummary } from "@/lib/chat";
+import type { Review } from "@/lib/types";
+import { NotificationBell } from "@/component/shared/notification-bell";
 
-export function DoctorDashboard({ doctorId, threads, reviews }: { doctorId: string; threads: PatientThread[]; reviews: Review[] }) {
+export function DoctorDashboard({ doctorId, chats, reviews, availableGBP }: { doctorId: string; chats: ChatSummary[]; reviews: Review[]; availableGBP: number | null }) {
+  const { regions, fee } = usePricing();
   const { doctor } = useAccount();
   // Not saved to the backend yet; resets on reload.
   const [online, setOnline] = useState(true);
-  const conversations = useChat((s) => s.conversations);
   const [now] = useState(() => new Date());
   const allBookings = useConsultations((s) => s.consultations);
   if (!doctor) return null;
@@ -32,8 +34,9 @@ export function DoctorDashboard({ doctorId, threads, reviews }: { doctorId: stri
     .filter(({ t }) => t.state === "upcoming" || t.state === "active")
     .sort((a, b) => a.c.startsAt.localeCompare(b.c.startsAt));
 
-  const awaiting = threads.filter((t) => t.status !== "closed" && conversations[t.id]?.at(-1)?.from === "patient");
-  const active = threads.filter((t) => t.status !== "closed");
+  // From the backend: chats whose last message is the patient's are waiting for you.
+  const awaiting = chats.filter((c) => c.lastFrom === "patient");
+  const active = chats;
   const avgRating = reviews.length ? reviews.reduce((s, r) => s + r.rating, 0) / reviews.length : 0;
   const consultations = 38;
   // Existing browser sessions created before availability moved into onboarding may not have this field yet.
@@ -51,7 +54,7 @@ export function DoctorDashboard({ doctorId, threads, reviews }: { doctorId: stri
     { icon: MessagesSquare, label: "Active chats", value: String(active.length), tone: "bg-primary-soft text-primary" },
     { icon: Clock, label: "Awaiting your reply", value: String(awaiting.length), tone: "bg-accent-soft text-accent" },
     { icon: Star, label: "Average rating", value: avgRating ? avgRating.toFixed(1) : "—", tone: "bg-gold-soft text-gold" },
-    { icon: Wallet, label: "Earnings this month", value: formatMoney(consultations * doctor.feeGBP * 0.8, "GBP"), tone: "bg-secondary-soft text-secondary" },
+    { icon: Wallet, label: "Available to withdraw", value: availableGBP === null ? "—" : formatMoney(availableGBP, "GBP"), tone: "bg-secondary-soft text-secondary" },
   ];
 
   return (
@@ -73,19 +76,10 @@ export function DoctorDashboard({ doctorId, threads, reviews }: { doctorId: stri
             </div>
           </div>
           <div className="flex w-full items-center gap-3 lg:w-auto">
-            <Link
-              href="/doctor/messages"
-              aria-label={awaiting.length ? `${awaiting.length} conversations need your attention` : "Notifications"}
-              title="Notifications"
-              className="relative inline-flex size-11 shrink-0 items-center justify-center rounded-2xl border border-white/80 bg-surface/80 text-muted-foreground shadow-[var(--shadow-soft)] backdrop-blur transition-colors hover:border-primary/30 hover:bg-primary-soft hover:text-primary"
-            >
-              <Bell className="size-5" />
-              {awaiting.length > 0 && (
-                <span className="absolute -top-1 -right-1 inline-flex size-5 items-center justify-center rounded-full bg-accent text-[10px] font-bold text-accent-foreground ring-2 ring-primary-soft">
-                  {awaiting.length > 9 ? "9+" : awaiting.length}
-                </span>
-              )}
-            </Link>
+            <NotificationBell
+              href="/doctor/notifications"
+              className="size-11 rounded-2xl border border-white/80 bg-surface/80 shadow-[var(--shadow-soft)] backdrop-blur hover:border-primary/30 hover:bg-primary-soft hover:text-primary"
+            />
             <div className="w-full rounded-2xl border border-white/80 bg-surface/80 p-4 shadow-[var(--shadow-soft)] backdrop-blur sm:w-80">
               <Switch
                 checked={online}
@@ -126,23 +120,18 @@ export function DoctorDashboard({ doctorId, threads, reviews }: { doctorId: stri
               <p className="py-6 text-center text-sm text-muted-foreground">You&apos;re all caught up.</p>
             ) : (
               <ul className="space-y-2">
-                {awaiting.map((t) => {
-                  const last = conversations[t.id]?.at(-1);
-                  return (
-                    <li key={t.id}>
-                      <Link href={`/doctor/messages/${t.id}`} className="flex items-center gap-3 rounded-2xl p-3 transition-colors hover:bg-surface-2">
-                        <Avatar name={t.patientName} hue={t.hue} size="sm" />
-                        <div className="min-w-0 flex-1">
-                          <p className="text-sm font-semibold text-foreground">
-                            {t.patientName} <span className="font-normal text-muted-foreground">· {t.age} · {t.topic}</span>
-                          </p>
-                          <p className="truncate text-sm text-muted-foreground">{last?.text}</p>
-                        </div>
-                        {last && <span className="shrink-0 text-xs text-muted-foreground">{format(parseISO(last.at), "HH:mm")}</span>}
-                      </Link>
-                    </li>
-                  );
-                })}
+                {awaiting.map((c) => (
+                  <li key={c.id}>
+                    <Link href={`/doctor/messages/${c.id}`} className="flex items-center gap-3 rounded-2xl p-3 transition-colors hover:bg-surface-2">
+                      <Avatar name={c.name} src={c.avatar} hue={c.hue} size="sm" />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-semibold text-foreground">{c.name}</p>
+                        <p className="truncate text-sm text-muted-foreground">{c.lastText}</p>
+                      </div>
+                      {c.lastAt && <span className="shrink-0 text-xs text-muted-foreground">{format(parseISO(c.lastAt), "HH:mm")}</span>}
+                    </Link>
+                  </li>
+                ))}
               </ul>
             )}
           </CardBody>
@@ -179,10 +168,10 @@ export function DoctorDashboard({ doctorId, threads, reviews }: { doctorId: stri
             <CardHeader title="Your fee by region" description={`Base fee ${formatMoney(doctor.feeGBP, "GBP")} · set in Profile`} />
             <CardBody>
               <ul className="space-y-1.5 text-sm">
-                {REGION_LIST.map((r) => (
+                {regions.map((r) => (
                   <li key={r.id} className="flex justify-between">
                     <span className="text-muted-foreground">{r.name}</span>
-                    <span className="font-medium text-foreground tabular-nums">{regionalFee(doctor.feeGBP, r.id).label}</span>
+                    <span className="font-medium text-foreground tabular-nums">{fee(doctor.feeGBP, r.id).label}</span>
                   </li>
                 ))}
               </ul>

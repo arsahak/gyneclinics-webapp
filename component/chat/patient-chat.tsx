@@ -8,10 +8,11 @@ import { ConsultationFee } from "@/component/shared/region";
 import { ButtonLink } from "@/component/ui/button";
 import { CONSULTATION_POLICY, messagingFor } from "@/lib/consultation";
 import { useDoctorConsultation } from "@/lib/hooks";
+import type { PatientChatData } from "@/lib/services/chats";
 import type { Doctor } from "@/lib/types";
 import { ChatThread } from "./chat-thread";
 
-export function PatientChat({ doctor }: { doctor: Doctor }) {
+export function PatientChat({ doctor, chat }: { doctor: Doctor; chat: PatientChatData }) {
   const { now, current } = useDoctorConsultation(doctor.id);
   const state = current?.state ?? null;
   const bookHref = `/patient/doctors/${doctor.id}/book`;
@@ -71,9 +72,29 @@ export function PatientChat({ doctor }: { doctor: Doctor }) {
     );
   }
 
+  // The backend has the final say on who can write (e.g. a consultation booked on another device).
+  if (!lockedComposer && !chat.canSend) {
+    statusBar = null;
+    lockedComposer = (
+      <Locked
+        title={`You can't message ${doctor.name} right now`}
+        body={chat.reason ?? "Book a consultation to chat."}
+        action={
+          messaging.consultation ? (
+            <ButtonLink href={bookHref}>
+              <CalendarCheck /> Book · <ConsultationFee baseFeeGBP={doctor.feeGBP} />
+            </ButtonLink>
+          ) : undefined
+        }
+      />
+    );
+  }
+  if (lockedComposer && chat.canSend) lockedComposer = null;
+
   return (
     <ChatThread
-      conversationId={doctor.id}
+      to={{ doctorId: doctor.id }}
+      initialMessages={chat.messages}
       me="patient"
       backHref="/patient/messages"
       counterpart={{

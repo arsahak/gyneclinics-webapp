@@ -1,23 +1,24 @@
 import type { Metadata } from "next";
-import { StoryForm } from "@/component/learn/story-form";
+import { StoryFeed } from "@/component/learn/story-feed";
 import { PageHeader } from "@/component/shared/page-header";
-import { getCategories } from "@/lib/services/content";
+import { getMyStories, getStoryFeed } from "@/lib/services/stories";
 
-export const metadata: Metadata = { title: "Share your story" };
+export const metadata: Metadata = { title: "Community stories" };
 
 // The layout checks the session on the server, so this page is rendered per request.
 export const instant = false;
 
+/** Community stories as a feed, with a share box that opens the form. */
 export default async function ShareStoryPage() {
-  const categories = await getCategories();
+  const [stories, myStories] = await Promise.all([getStoryFeed(), getMyStories()]);
   return (
     <>
       <PageHeader
-        backHref="/patient/learn"
-        title="Share your story"
-        description="Your experience could help another woman feel less alone."
+        eyebrow="Learn"
+        title="Community stories"
+        description="Real experiences shared by women in our community, reviewed by our team."
       />
-      <StoryForm categories={categories} />
+      <StoryFeed stories={stories} myStories={myStories} />
     </>
   );
 }

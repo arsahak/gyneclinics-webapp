@@ -5,6 +5,7 @@ import { BookingCta } from "@/component/booking/booking-cta";
 import { AvailabilityLabel } from "@/component/doctors/availability";
 import { ConsultationHours } from "@/component/doctors/consultation-hours";
 import { Rating } from "@/component/doctors/rating";
+import { ReportDoctor } from "@/component/doctors/report-doctor";
 import { ReviewSection } from "@/component/doctors/review-section";
 import { Disclaimer } from "@/component/shared/disclaimer";
 import { PageHeader } from "@/component/shared/page-header";
@@ -20,7 +21,7 @@ export const instant = false;
 
 export default async function DoctorProfilePage({ params }: PageProps<"/patient/doctors/[id]">) {
   const { id } = await params;
-  const [doctor, reviews] = await Promise.all([getDoctor(id), getDoctorReviews(id)]);
+  const [doctor, { reviews, mine }] = await Promise.all([getDoctor(id), getDoctorReviews(id)]);
   if (!doctor) notFound();
 
   const facts = [
@@ -92,12 +93,13 @@ export default async function DoctorProfilePage({ params }: PageProps<"/patient/
             <ConsultationHours doctor={doctor} />
           </Card>
 
-          <ReviewSection doctorId={doctor.id} doctorName={doctor.name} reviews={reviews} />
+          <ReviewSection doctorId={doctor.id} doctorName={doctor.name} reviews={reviews} mine={mine} />
         </div>
 
         <div className="space-y-4 lg:sticky lg:top-10 lg:self-start">
           <BookingCta doctor={doctor} />
           <Disclaimer>Chat guidance is informational and does not replace an in-person examination or diagnosis.</Disclaimer>
+          <ReportDoctor doctorId={doctor.id} doctorName={doctor.name} />
         </div>
       </div>
     </>

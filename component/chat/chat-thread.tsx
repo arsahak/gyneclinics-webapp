@@ -3,15 +3,16 @@
 import { format, isSameDay, isToday, isYesterday, parseISO } from "date-fns";
 import { ArrowLeft, LockKeyhole, SendHorizontal, ShieldAlert } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
+import { pollChatAction, sendChatMessageAction } from "@/app/actions/chatAction";
 import { Avatar } from "@/component/ui/avatar";
 import { Button } from "@/component/ui/button";
 import { describeBlocked, scanForContactDetails } from "@/lib/chat-guard";
-import { useChat } from "@/lib/store/chat";
 import type { Message, Role } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
-const EMPTY: Message[] = [];
+/** How often an open chat checks for new messages. */
+const POLL_MS = 5000;
 
 function dayLabel(date: Date) {
   if (isToday(date)) return "Today";
@@ -20,7 +21,8 @@ function dayLabel(date: Date) {
 }
 
 export function ChatThread({
-  conversationId,
+  to,
+  initialMessages,
   me,
   counterpart,
   backHref,
@@ -29,7 +31,9 @@ export function ChatThread({
   lockedComposer,
   readOnly = false,
 }: {
-  conversationId: string;
+  /** Who the messages go to: patients pass the doctor, doctors pass the chat. */
+  to: { doctorId: string } | { chatId: string };
+  initialMessages: Message[];
   me: Role;
   counterpart: { name: string; hue: number; avatar?: string; subtitle: React.ReactNode };
   backHref: string;
@@ -40,27 +44,55 @@ export function ChatThread({
   lockedComposer?: React.ReactNode;
   readOnly?: boolean;
 }) {
-  const messages = useChat((s) => s.conversations[conversationId] ?? EMPTY);
-  const send = useChat((s) => s.send);
+  const [messages, setMessages] = useState<Message[]>(initialMessages);
   const [text, setText] = useState("");
   const [attempted, setAttempted] = useState(false);
+  const [serverError, setServerError] = useState("");
+  const [sending, startSending] = useTransition();
   const endRef = useRef<HTMLDivElement>(null);
   const blocked = scanForContactDetails(text);
+  const toKey = "doctorId" in to ? to.doctorId : to.chatId;
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ block: "end" });
   }, [messages.length]);
 
+  // New messages from the other side: check every few seconds while the tab is visible.
+  useEffect(() => {
+    let stopped = false;
+    const timer = setInterval(async () => {
+      if (document.visibilityState !== "visible") return;
+      const latest = await pollChatAction(to);
+      if (!stopped && latest) setMessages((current) => (latest.length !== current.length || latest.at(-1)?.id !== current.at(-1)?.id ? latest : current));
+    }, POLL_MS);
+    return () => {
+      stopped = true;
+      clearInterval(timer);
+    };
+    // `to` is a fresh object each render; its id is what matters.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [toKey]);
+
   const submit = (event: React.FormEvent) => {
     event.preventDefault();
-    if (!text.trim()) return;
+    if (!text.trim() || sending) return;
     if (blocked.length) {
+      // The app blocks it here too; the server would refuse it anyway.
       setAttempted(true);
       return;
     }
-    send(conversationId, me, text.trim());
-    setText("");
-    setAttempted(false);
+    const body = text.trim();
+    startSending(async () => {
+      setServerError("");
+      const result = await sendChatMessageAction({ ...to, text: body });
+      if (result.error || !result.message) {
+        setServerError(result.error ?? "Couldn't send. Please try again.");
+        return;
+      }
+      setMessages((current) => [...current, result.message!]);
+      setText("");
+      setAttempted(false);
+    });
   };
 
   return (
@@ -120,6 +152,12 @@ export function ChatThread({
         <p className="border-t border-border px-4 py-4 text-center text-sm text-muted-foreground">This conversation has been closed.</p>
       ) : (
         <form onSubmit={submit} className="border-t border-border p-3">
+          {serverError && (
+            <div role="alert" className="mb-2 flex items-start gap-2 rounded-2xl bg-danger-soft px-3 py-2 text-xs text-danger">
+              <ShieldAlert className="mt-0.5 size-4 shrink-0" />
+              {serverError}
+            </div>
+          )}
           {blocked.length > 0 && (
             <div
               role="alert"
@@ -138,6 +176,7 @@ export function ChatThread({
               onChange={(e) => {
                 setText(e.target.value);
                 setAttempted(false);
+                setServerError("");
               }}
               onKeyDown={(e) => {
                 if (e.key === "Enter" && !e.shiftKey) {
@@ -150,7 +189,7 @@ export function ChatThread({
               aria-label="Message"
               className="max-h-32 min-h-11 flex-1 resize-none rounded-3xl border border-border bg-background px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none"
             />
-            <Button type="submit" size="icon" className="size-11" aria-label="Send" disabled={!text.trim() || blocked.length > 0}>
+            <Button type="submit" size="icon" className="size-11" aria-label="Send" disabled={!text.trim() || blocked.length > 0 || sending}>
               <SendHorizontal />
             </Button>
           </div>

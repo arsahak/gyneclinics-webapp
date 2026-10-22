@@ -114,30 +114,38 @@ export interface Article {
   title: string;
   excerpt: string;
   category: ArticleCategory;
-  format: "blog" | "guide" | "story";
+  format: "blog" | "guide" | "story" | "image";
   readMinutes: number;
   author: string;
   authorRole: string;
   publishedAt: string;
   cover: { from: string; to: string; icon: string };
+  /** Feature image; shown instead of the gradient cover. */
+  image?: string;
   sponsor?: string;
   sections: { heading?: string; body: string }[];
+  /** Full text as HTML (articles from the backend, already cleaned there). Used instead of sections. */
+  html?: string;
 }
 
-export type StoryStatus = "pending" | "approved" | "rejected";
+/** pending = waiting for review; hidden = was approved, then taken down. */
+export type StoryStatus = "pending" | "approved" | "rejected" | "hidden";
 
+/** A community story from the backend (GET /stories/feed or /stories/mine). */
 export interface SubmittedStory {
-  id: string;
+  _id: string;
   title: string;
-  body: string;
-  category: ArticleCategory;
-  authorName: string;
+  /** Plain text; missing in the patient's own list. */
+  body?: string;
+  topic: ArticleCategory;
   anonymous: boolean;
-  /** Optional image stored locally until the production media service is connected. */
-  imageDataUrl?: string;
-  submittedAt: string;
-  status: StoryStatus;
-  reviewedAt?: string;
+  authorName?: string;
+  imageUrl?: string;
+  status?: StoryStatus;
+  /** Why it wasn't approved; shown to the patient. */
+  rejectionReason?: string;
+  createdAt: string;
+  publishedAt?: string;
 }
 
 export type Flow = "light" | "medium" | "heavy";
@@ -172,23 +180,17 @@ export interface Message {
   at: string; // ISO timestamp
 }
 
-export interface PatientThread {
-  id: string;
-  patientName: string;
-  age: number;
-  topic: string;
-  hue: number;
-  status: "active" | "waiting" | "closed";
-}
-
+/** An ad as the backend serves it (GET /advertisements/serve), set up in the admin dashboard. */
 export interface AdCreative {
-  id: string;
+  _id: string;
   advertiser: string;
   headline: string;
   body: string;
   cta: string;
+  linkUrl: string;
   priceGBP?: number;
   tone: "primary" | "secondary" | "accent" | "gold";
+  imageUrl?: string;
 }
 
 export type ConsultationMode = "instant" | "scheduled";
@@ -214,7 +216,7 @@ export interface Consultation {
     regionId: string;
     method: PaymentMethodId | "free";
     reference: string;
-    /** Human-readable instrument, e.g. "Visa •••• 4242" or "bKash •••• 3456". */
+    /** Human-readable instrument from Stripe, e.g. "Visa •••• 4242" or "Apple Pay · Visa •••• 4242". */
     details?: string;
     paidAt?: string;
   };

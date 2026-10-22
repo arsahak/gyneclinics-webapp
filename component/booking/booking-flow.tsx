@@ -1,6 +1,7 @@
 "use client";
 
 import { format, isToday, isTomorrow } from "date-fns";
+import { sendChatMessageAction } from "@/app/actions/chatAction";
 import {
   ArrowLeft,
   ArrowRight,
@@ -29,10 +30,9 @@ import { Checkbox, Field, Textarea } from "@/component/ui/field";
 import { describeBlocked, scanForContactDetails } from "@/lib/chat-guard";
 import { formatMoney } from "@/lib/locale/regions";
 import { slotsFor, type Slot } from "@/lib/availability";
-import { canStartInstantly, CONSULTATION_POLICY, paymentMethodsFor, timeline } from "@/lib/consultation";
+import { canStartInstantly, CONSULTATION_POLICY, timeline } from "@/lib/consultation";
 import { useDoctorConsultation, useNow } from "@/lib/hooks";
 import { useDoctorSchedule } from "@/lib/store/availability";
-import { useChat } from "@/lib/store/chat";
 import { useConsultations } from "@/lib/store/consultations";
 import { useRegion, useRegionalFee } from "@/lib/store/locale";
 import type { Consultation, ConsultationMode, Doctor } from "@/lib/types";
@@ -67,7 +67,6 @@ export function BookingFlow({ doctor }: { doctor: Doctor }) {
   const { current } = useDoctorConsultation(doctor.id);
   const consultations = useConsultations((s) => s.consultations);
   const book = useConsultations((s) => s.book);
-  const send = useChat((s) => s.send);
 
   const schedule = useDoctorSchedule(doctor.id, doctor.availability, doctor.schedule);
   const instantAllowed = canStartInstantly(doctor.availability, schedule);
@@ -94,7 +93,6 @@ export function BookingFlow({ doctor }: { doctor: Doctor }) {
   );
   // Start on the first day that still has an open slot.
   const dayIndex = dayChoice ?? Math.max(0, days.findIndex((d) => d.slots.some((s) => s.available)));
-  const methods = paymentMethodsFor(region.id);
   const blocked = scanForContactDetails(concern);
   const openConsultation = current && (current.state === "active" || current.state === "upcoming") ? current : null;
 
@@ -106,11 +104,10 @@ export function BookingFlow({ doctor }: { doctor: Doctor }) {
         doctor={doctor}
         mode={mode}
         slot={mode === "scheduled" ? slot : null}
+        concern={concern.trim()}
+        regionId={region.id}
         feeLabel={fee.label}
         free={free}
-        regionId={region.id}
-        methods={methods}
-        initialMethod={methods[0].id}
         onCancel={(reason) => {
           setCheckingOut(false);
           if (reason === "slot") {
@@ -119,19 +116,30 @@ export function BookingFlow({ doctor }: { doctor: Doctor }) {
           }
         }}
         onSuccess={(result) => {
-          const consultation = book({
+          const base = {
             doctorId: doctor.id,
             doctor: { name: doctor.name, title: doctor.title, hue: doctor.hue, avatar: doctor.avatar },
             mode,
             concern: concern.trim(),
+          };
+          // An instant chat opens now: start it with the concern. (A scheduled one opens later.)
+          if (mode === "instant") void sendChatMessageAction({ doctorId: doctor.id, text: concern.trim() }).catch(() => undefined);
+          if (result.kind === "paid") {
+            // Stripe confirmed it and the backend already saved the booking (and sent the text).
+            const { booked: b } = result;
+            setBooked(book({ ...base, startsAt: b.startsAt, payment: b.payment }, { id: b.reference, bookedAt: b.bookedAt }));
+            setSms(b.sms ?? { status: "skipped", to: "" });
+            return;
+          }
+          const consultation = book({
+            ...base,
             startsAt: mode === "instant" ? new Date().toISOString() : slot!.toISOString(),
-            payment: { amount: fee.amount, currency: fee.currency, regionId: region.id, ...result },
+            payment: { amount: 0, currency: fee.currency, regionId: region.id, method: "free", reference: "FREE", paidAt: new Date().toISOString() },
           });
-          send(doctor.id, "patient", concern.trim());
           setBooked(consultation);
           // Save it on the backend, which texts the patient a confirmation.
           confirmBookingAction(consultation, Intl.DateTimeFormat().resolvedOptions().timeZone).then(
-            (result) => setSms(result.sms ?? { status: "error", error: result.error ?? "Couldn't save your booking." }),
+            (r) => setSms(r.sms ?? { status: "error", error: r.error ?? "Couldn't save your booking." }),
             () => setSms({ status: "error", error: "Can't reach the server." }),
           );
         }}
@@ -331,9 +339,10 @@ export function BookingFlow({ doctor }: { doctor: Doctor }) {
                 {!free && (
                   <p className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
                     Pay with:
-                    {methods.map((m) => (
-                      <Badge key={m.id}>{m.label}</Badge>
+                    {["Card", "Apple Pay", "Google Pay"].map((m) => (
+                      <Badge key={m}>{m}</Badge>
                     ))}
+                    <span className="text-xs">· secured by Stripe</span>
                   </p>
                 )}
 
@@ -368,9 +377,6 @@ export function BookingFlow({ doctor }: { doctor: Doctor }) {
                 </Button>
               )}
             </div>
-            {step === 2 && !free && (
-              <p className="text-center text-xs text-muted-foreground">Test mode — no real payment is taken.</p>
-            )}
           </CardBody>
         </Card>
       </div>

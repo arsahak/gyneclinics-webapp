@@ -1,5 +1,6 @@
 // Region-based pricing. A doctor's base fee is set in GBP (the Europe price) and each
-// region applies its own multiplier and display currency. Admin will manage this table later.
+// region applies its own multiplier and display currency. The multipliers below are the
+// defaults; the live ones come from the backend (Fees & Commission, see lib/store/pricing.ts).
 
 export type RegionId =
   | "europe"
@@ -122,14 +123,17 @@ export function regionForTimezone(timeZone: string): RegionId | null {
   }
 }
 
-/** Consultation fee for a region, rounded to a whole number in that region's currency. */
-export function regionalFee(baseFeeGBP: number, regionId: RegionId) {
+/**
+ * Consultation fee for a region, rounded to a whole number in that region's currency.
+ * Pass the live multiplier (usePricing does); without it the default is used.
+ */
+export function regionalFee(baseFeeGBP: number, regionId: RegionId, multiplier = REGIONS[regionId].multiplier) {
   const region = REGIONS[regionId];
   if (baseFeeGBP <= 0) return { amount: 0, currency: region.currency, label: "Free" };
   const inCurrency =
     region.currency === "GBP"
-      ? baseFeeGBP * region.multiplier
-      : baseFeeGBP * GBP_TO_USD * region.multiplier;
+      ? baseFeeGBP * multiplier
+      : baseFeeGBP * GBP_TO_USD * multiplier;
   const amount = Math.max(1, Math.round(inCurrency));
   return { amount, currency: region.currency, label: formatMoney(amount, region.currency) };
 }

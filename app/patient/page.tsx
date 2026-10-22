@@ -1,4 +1,4 @@
-import { ArrowRight, Bell } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { NextConsultation } from "@/component/booking/next-consultation";
@@ -9,6 +9,7 @@ import { ArticleCard } from "@/component/learn/article-card";
 import { AdBanner } from "@/component/shared/ad-banner";
 import { getArticles } from "@/lib/services/content";
 import { getDoctors } from "@/lib/services/doctors";
+import { NotificationBell } from "@/component/shared/notification-bell";
 
 export const metadata: Metadata = { title: "Home" };
 
@@ -24,15 +25,10 @@ export default async function PatientHome() {
     <>
       <div className="flex items-start justify-between gap-4">
         <Greeting />
-        <Link
-          href="/patient/profile#reminders"
-          aria-label="Notifications and reminders"
-          title="Notifications and reminders"
-          className="relative mt-1 inline-flex size-10 shrink-0 items-center justify-center rounded-full border border-border bg-surface text-muted-foreground shadow-(--shadow-soft) transition-colors hover:border-primary/30 hover:bg-primary-soft hover:text-primary"
-        >
-          <Bell className="size-5" />
-          <span aria-hidden className="absolute top-2.5 right-2.5 size-1.5 rounded-full bg-accent ring-2 ring-surface" />
-        </Link>
+        <NotificationBell
+          href="/patient/notifications"
+          className="mt-1 border border-border bg-surface shadow-(--shadow-soft) hover:border-primary/30 hover:bg-primary-soft hover:text-primary"
+        />
       </div>
       <div className="grid gap-6 xl:grid-cols-[1fr_320px]">
         <div className="min-w-0 space-y-6">
