@@ -82,7 +82,8 @@ export function AppShell({ role, children }: { role: Role; children: ReactNode }
       )}
       {/* Desktop sidebar */}
       <aside className="sticky top-0 hidden h-dvh w-64 shrink-0 flex-col border-r border-white/10 bg-gradient-to-b from-[#573167] via-[#3d2a55] to-[#114152] lg:flex">
-        <div className="flex h-16 items-center px-6">
+        {/* White logo on the brand sidebar */}
+        <div className="flex h-16 shrink-0 items-center px-6">
           <Logo href={home} tone="inverse" />
         </div>
         <SidebarNav nav={nav} pathname={pathname} home={home} />
@@ -213,7 +214,8 @@ export function AppShellSkeleton({ role }: { role: Role }) {
   return (
     <div className="flex min-h-full flex-1">
       <aside className="sticky top-0 hidden h-dvh w-64 shrink-0 flex-col border-r border-white/10 bg-gradient-to-b from-[#573167] via-[#3d2a55] to-[#114152] lg:flex">
-        <div className="flex h-16 items-center px-6">
+        {/* White logo on the brand sidebar */}
+        <div className="flex h-16 shrink-0 items-center px-6">
           <Logo href={home} tone="inverse" />
         </div>
         <SidebarNav nav={nav} pathname="" home={home} />

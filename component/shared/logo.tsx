@@ -10,10 +10,10 @@ export function Logo({ href = "/", tone = "default", className }: { href?: strin
   return (
     <Link href={href} aria-label={`${APP_NAME} home`} className={cn("inline-flex items-center", className)}>
       <Image
-        src="/assets/logo/gynexapp-logo-sm.png"
+        src="/assets/logo/gynexapp-logo-web.png"
         alt={APP_NAME}
         width={900}
-        height={467}
+        height={404}
         // Shown about 70px wide; this keeps the download small.
         sizes="160px"
         priority
