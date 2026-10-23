@@ -200,8 +200,10 @@ export type PaymentMethodId = "card" | "wallet" | "local";
 export interface Consultation {
   id: string;
   doctorId: string;
-  /** The doctor as they were when booked, so the booking still shows if they leave the directory. */
+  /** The doctor as the backend has them, so the booking still shows if they leave the directory. */
   doctor?: { name: string; title?: string; hue: number; avatar?: string };
+  /** For the doctor's own list: who booked. */
+  patient?: { id: string; name: string; avatar?: string };
   mode: ConsultationMode;
   concern: string;
   /** When the chat opens (now for instant, slot start for scheduled). ISO timestamp. */

@@ -201,7 +201,12 @@ function MonthView({ onLog }: { onLog: (d: Dialog) => void }) {
 function History({ onEdit }: { onEdit: (d: Dialog) => void }) {
   const periods = useTracker((s) => s.periods);
   const deletePeriod = useTracker((s) => s.deletePeriod);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const sorted = sortByStart(periods).reverse();
+  const remove = (id: string) => {
+    setDeleteError(null);
+    void deletePeriod(id).then(setDeleteError);
+  };
 
   if (!sorted.length) {
     return <EmptyState icon={Droplet} title="No periods logged yet" description="Logged periods will appear here so you can edit or remove them." />;
@@ -209,6 +214,11 @@ function History({ onEdit }: { onEdit: (d: Dialog) => void }) {
 
   return (
     <Card className="divide-y divide-border">
+      {deleteError && (
+        <p role="alert" className="p-4 text-sm text-danger sm:px-6">
+          {deleteError}
+        </p>
+      )}
       {sorted.map((entry, i) => {
         const previous = sorted[i + 1];
         const cycle = previous
@@ -236,7 +246,7 @@ function History({ onEdit }: { onEdit: (d: Dialog) => void }) {
               <Button variant="ghost" size="icon" aria-label="Edit" onClick={() => onEdit({ entry })}>
                 <Pencil />
               </Button>
-              <Button variant="ghost" size="icon" aria-label="Delete" onClick={() => deletePeriod(entry.id)}>
+              <Button variant="ghost" size="icon" aria-label="Delete" onClick={() => remove(entry.id)}>
                 <Trash2 />
               </Button>
             </div>

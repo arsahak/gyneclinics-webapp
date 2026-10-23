@@ -1,12 +1,10 @@
 import { addDays, addMinutes, format, getDay, isBefore, setHours, setMinutes, startOfDay } from "date-fns";
-import type { Availability } from "@/lib/types";
 
 // Doctor-managed consultation hours. Each doctor sets weekly time ranges, slot length,
 // how far ahead patients can book, minimum notice and days off. Patient booking slots
 // are generated from this schedule.
 //
-// Times are treated as the viewer's local time in this UI-only build; the backend should
-// store the doctor's time zone and convert slots for each patient.
+// Times are shown in the viewer's local time.
 
 export interface TimeRange {
   start: string; // "HH:mm"
@@ -43,34 +41,24 @@ export const toMinutes = (time: string) => {
   return h * 60 + m;
 };
 
-const range = (start: string, end: string): TimeRange => ({ start, end });
+/** The backend's default: Mon–Fri 09:00–17:00, 30-minute slots, a week ahead. */
+export const DEFAULT_SCHEDULE: DoctorSchedule = {
+  weekly: Array.from({ length: 7 }, (_, day) => (day < 5 ? [{ start: "09:00", end: "17:00" }] : [])),
+  slotMinutes: 30,
+  bookingWindowDays: 7,
+  minNoticeHours: 1,
+  instantChat: true,
+  timeOff: [],
+  timezone: "Europe/London",
+};
 
-function hash(text: string) {
-  let h = 0;
-  for (const char of text) h = (h * 31 + char.charCodeAt(0)) >>> 0;
-  return h;
-}
-
-/** Sensible starting schedule for a doctor, varied a little per doctor for the mock data. */
-export function defaultScheduleFor(doctorId: string, availability: Availability): DoctorSchedule {
-  const variant = hash(doctorId) % 3;
-  const weekday = [
-    [range("09:00", "13:00"), range("14:00", "17:30")],
-    [range("10:00", "14:00"), range("16:00", "19:00")],
-    [range("08:30", "12:30"), range("13:30", "16:30")],
-  ][variant];
-  const weekly: TimeRange[][] = [0, 1, 2, 3, 4].map(() => weekday.map((r) => ({ ...r })));
-  weekly.push(variant === 1 ? [range("10:00", "13:00")] : []); // Saturday
-  weekly.push([]); // Sunday
-  if (availability === "this_week") weekly[0] = [];
+/** A doctor's saved schedule, with the default for anything missing. */
+export function scheduleOf(schedule?: Partial<DoctorSchedule> | null): DoctorSchedule {
   return {
-    weekly,
-    slotMinutes: 30,
-    bookingWindowDays: availability === "away" ? 14 : 7,
-    minNoticeHours: 1,
-    instantChat: availability !== "away",
-    timeOff: [],
-    timezone: "Europe/London",
+    ...DEFAULT_SCHEDULE,
+    ...schedule,
+    weekly: schedule?.weekly?.length === 7 ? schedule.weekly : DEFAULT_SCHEDULE.weekly,
+    timeOff: schedule?.timeOff ?? [],
   };
 }
 
@@ -104,13 +92,8 @@ export interface ScheduleDay {
   closed?: "off" | "time-off";
 }
 
-// Deterministic "booked by someone else" pattern so mock slots look realistic.
-function takenByOthers(doctorId: string, key: string) {
-  return hash(doctorId + key) % 4 === 0;
-}
-
-/** Bookable slots generated from a doctor's schedule. */
-export function slotsFor(doctorId: string, schedule: DoctorSchedule, now: Date, bookedStarts: string[] = []): ScheduleDay[] {
+/** Bookable slots from a doctor's schedule. `bookedStarts` are times already taken (from the backend). */
+export function slotsFor(schedule: DoctorSchedule, now: Date, bookedStarts: string[] = []): ScheduleDay[] {
   const earliest = addMinutes(now, schedule.minNoticeHours * 60);
   const booked = new Set(bookedStarts.map((s) => format(new Date(s), "yyyy-MM-dd'T'HH:mm")));
   const days: ScheduleDay[] = [];
@@ -133,7 +116,7 @@ export function slotsFor(doctorId: string, schedule: DoctorSchedule, now: Date, 
       const end = addMinutes(date, toMinutes(r.end));
       while (!isBefore(end, addMinutes(t, schedule.slotMinutes))) {
         const key = format(t, "yyyy-MM-dd'T'HH:mm");
-        slots.push({ start: t, available: !isBefore(t, earliest) && !booked.has(key) && !takenByOthers(doctorId, key) });
+        slots.push({ start: t, available: !isBefore(t, earliest) && !booked.has(key) });
         t = addMinutes(t, schedule.slotMinutes);
       }
     }

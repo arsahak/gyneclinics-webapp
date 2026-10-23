@@ -78,14 +78,17 @@ export function Switch({
   onChange,
   label,
   description,
+  disabled = false,
 }: {
   checked: boolean;
   onChange: (checked: boolean) => void;
   label: ReactNode;
   description?: ReactNode;
+  /** While a change is being saved. */
+  disabled?: boolean;
 }) {
   return (
-    <label className="flex cursor-pointer items-center justify-between gap-4">
+    <label className={cn("flex items-center justify-between gap-4", disabled ? "cursor-wait opacity-70" : "cursor-pointer")}>
       <span className="text-sm">
         <span className="font-medium text-foreground">{label}</span>
         {description && <span className="mt-0.5 block text-muted-foreground">{description}</span>}
@@ -94,6 +97,7 @@ export function Switch({
         type="button"
         role="switch"
         aria-checked={checked}
+        disabled={disabled}
         onClick={() => onChange(!checked)}
         className={cn(
           "relative h-6 w-11 shrink-0 rounded-full transition-colors",

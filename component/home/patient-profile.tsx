@@ -26,8 +26,10 @@ const PREGNANCY_LABEL: Record<PregnancyStatus, string> = {
 
 export function PatientProfileView() {
   const today = useToday();
-  const { patient, phone } = useAccount();
-  const seedDemo = useTracker((s) => s.seedDemo);
+  const { patient, phone, avatar } = useAccount();
+  const clearTracker = useTracker((s) => s.clear);
+  // The newest logged weight, else the one from the profile.
+  const latestWeight = useTracker((s) => [...s.weights].sort((a, b) => b.date.localeCompare(a.date))[0]?.kg);
   const [editing, setEditing] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saving, startSaving] = useTransition();
@@ -37,7 +39,7 @@ export function PatientProfileView() {
   const details = [
     { label: "Age", value: age !== null ? `${age} years` : "—" },
     { label: "Height", value: `${patient.heightCm} cm` },
-    { label: "Weight", value: `${patient.weightKg} kg` },
+    { label: "Weight", value: `${latestWeight ?? patient.weightKg} kg` },
     { label: "Usual cycle", value: `${patient.typicalCycleLength} days` },
   ];
 
@@ -47,7 +49,7 @@ export function PatientProfileView() {
         <Card>
           <CardBody>
             <div className="flex items-center gap-4">
-              <Avatar name={patient.fullName} hue={330} size="lg" />
+              <Avatar name={patient.fullName} src={avatar || undefined} hue={330} size="lg" />
               <div className="min-w-0 flex-1">
                 <p className="truncate font-serif text-xl font-semibold text-foreground">{patient.fullName}</p>
                 <p className="text-sm text-muted-foreground">{phone}</p>
@@ -72,7 +74,7 @@ export function PatientProfileView() {
       </div>
       <div className="space-y-6">
         <LocationCard />
-        <PrivacyCard onResetDemo={seedDemo} />
+        <PrivacyCard onClearTracker={clearTracker} />
       </div>
       <EditProfileDialog
         key={String(editing)}
@@ -103,7 +105,12 @@ function subscribeNoop() {
 
 function RemindersCard() {
   const reminders = useTracker((s) => s.reminders);
-  const setReminders = useTracker((s) => s.setReminders);
+  const saveReminders = useTracker((s) => s.setReminders);
+  const [error, setError] = useState<string | null>(null);
+  const setReminders = (changes: Parameters<typeof saveReminders>[0]) => {
+    setError(null);
+    void saveReminders(changes).then(setError);
+  };
   const initialPermission = useSyncExternalStore(
     subscribeNoop,
     () => ("Notification" in window ? Notification.permission : "unsupported"),
@@ -133,6 +140,11 @@ function RemindersCard() {
         )}
         <Switch checked={reminders.fertileReminder} onChange={(v) => setReminders({ fertileReminder: v })} label="Fertile window" description="When your estimated fertile window begins" />
         <Switch checked={reminders.dailyLogReminder} onChange={(v) => setReminders({ dailyLogReminder: v })} label="Daily check-in" description="A gentle nudge to log symptoms" />
+        {error && (
+          <p role="alert" className="text-sm text-danger">
+            {error}
+          </p>
+        )}
         <div className="flex items-center justify-between gap-3 rounded-2xl bg-surface-2 p-3 text-sm">
           <span className="flex items-center gap-2 text-muted-foreground">
             {current === "granted" ? <Bell className="size-4 text-success" /> : <BellOff className="size-4" />}

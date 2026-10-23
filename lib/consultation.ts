@@ -1,6 +1,5 @@
 import { addDays, addHours } from "date-fns";
 import { slotsFor, type DoctorSchedule } from "@/lib/availability";
-import { doctors as demoDoctors } from "@/lib/mock/doctors";
 import type { Availability, Consultation, Doctor, DoctorMessaging } from "@/lib/types";
 
 /**
@@ -20,11 +19,11 @@ export interface ConsultationDoctor {
   listed: boolean;
 }
 
-/** The doctor for a booking: from the directory, else as saved at booking time. */
+/** The doctor for a booking: from the directory, else as the backend has them on the booking. */
 export function consultationDoctor(c: Consultation, doctors: Doctor[]): ConsultationDoctor {
   const listed = doctors.find((d) => d.id === c.doctorId);
   if (listed) return { id: listed.id, name: listed.name, title: listed.title, hue: listed.hue, avatar: listed.avatar, listed: true };
-  const saved = c.doctor ?? demoDoctors.find((d) => d.id === c.doctorId);
+  const saved = c.doctor;
   return { id: c.doctorId, name: saved?.name ?? "Your doctor", title: saved?.title, hue: saved?.hue ?? 186, avatar: saved?.avatar, listed: false };
 }
 
@@ -89,15 +88,9 @@ export function canStartInstantly(availability: Availability, schedule: DoctorSc
   return availability === "online" && schedule.instantChat;
 }
 
-/** Re-checks a slot against the doctor's schedule right before payment. */
-export function isSlotStillAvailable(
-  doctorId: string,
-  schedule: DoctorSchedule,
-  slot: Date,
-  now: Date,
-  bookedStarts: string[],
-) {
-  return slotsFor(doctorId, schedule, now, bookedStarts).some((day) =>
+/** Re-checks a slot against the doctor's schedule and current bookings right before payment. */
+export function isSlotStillAvailable(schedule: DoctorSchedule, slot: Date, now: Date, bookedStarts: string[]) {
+  return slotsFor(schedule, now, bookedStarts).some((day) =>
     day.slots.some((s) => s.available && s.start.getTime() === slot.getTime()),
   );
 }

@@ -1,13 +1,12 @@
 "use client";
 
 import { CalendarClock } from "lucide-react";
-import { summarizeWeek } from "@/lib/availability";
-import { useDoctorSchedule } from "@/lib/store/availability";
+import { scheduleOf, summarizeWeek } from "@/lib/availability";
 import type { Doctor } from "@/lib/types";
 
 /** The doctor's weekly consultation hours, as they've set them in the doctor portal. */
 export function ConsultationHours({ doctor }: { doctor: Doctor }) {
-  const schedule = useDoctorSchedule(doctor.id, doctor.availability, doctor.schedule);
+  const schedule = scheduleOf(doctor.schedule);
   const rows = summarizeWeek(schedule);
   return (
     <section>

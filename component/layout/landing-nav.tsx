@@ -2,7 +2,7 @@
 
 import { ArrowUpRight, HelpCircle, Mail, Menu, ShieldCheck, X } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 import { Container } from "@/component/landing/layout";
 import { Logo } from "@/component/shared/logo";
 import { ThemeToggle } from "@/component/shared/theme-toggle";
@@ -82,8 +82,11 @@ function useActiveSection() {
   return active;
 }
 
-/** Landing page navbar on the brand colour, with a collapsible menu on small screens. */
-export function LandingNav() {
+/**
+ * Landing page navbar on the brand colour, with a collapsible menu on small screens.
+ * `account` is the log-in / portal button (`NavAccount`), rendered on the server.
+ */
+export function LandingNav({ account }: { account: ReactNode }) {
   const [open, setOpen] = useState(false);
   const active = useActiveSection();
 
@@ -113,12 +116,7 @@ export function LandingNav() {
 
         <div className="flex items-center gap-1 sm:gap-2">
           <ThemeToggle className="text-white/80 hover:bg-white/10 hover:text-white" />
-          <Link
-            href="/login"
-            className="inline-flex h-9 items-center rounded-full bg-white px-5 text-sm font-medium text-primary transition-colors hover:bg-white/90"
-          >
-            Log in
-          </Link>
+          {account}
           <button
             type="button"
             aria-label={open ? "Close menu" : "Open menu"}

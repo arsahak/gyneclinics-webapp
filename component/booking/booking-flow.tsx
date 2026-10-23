@@ -3,6 +3,7 @@
 import { format, isToday, isTomorrow } from "date-fns";
 import { sendChatMessageAction } from "@/app/actions/chatAction";
 import {
+  AlertTriangle,
   ArrowLeft,
   ArrowRight,
   BadgeCheck,
@@ -29,10 +30,9 @@ import { Card, CardBody } from "@/component/ui/card";
 import { Checkbox, Field, Textarea } from "@/component/ui/field";
 import { describeBlocked, scanForContactDetails } from "@/lib/chat-guard";
 import { formatMoney } from "@/lib/locale/regions";
-import { slotsFor, type Slot } from "@/lib/availability";
+import { scheduleOf, slotsFor, type Slot } from "@/lib/availability";
 import { canStartInstantly, CONSULTATION_POLICY, timeline } from "@/lib/consultation";
 import { useDoctorConsultation, useNow } from "@/lib/hooks";
-import { useDoctorSchedule } from "@/lib/store/availability";
 import { useConsultations } from "@/lib/store/consultations";
 import { useRegion, useRegionalFee } from "@/lib/store/locale";
 import type { Consultation, ConsultationMode, Doctor } from "@/lib/types";
@@ -59,7 +59,8 @@ function dayName(date: Date) {
   return format(date, "EEE");
 }
 
-export function BookingFlow({ doctor }: { doctor: Doctor }) {
+/** `bookedStarts`: times the backend says are already taken for this doctor. */
+export function BookingFlow({ doctor, bookedStarts }: { doctor: Doctor; bookedStarts: string[] }) {
   const now = useNow();
   const { region } = useRegion();
   const fee = useRegionalFee(doctor.feeGBP);
@@ -68,7 +69,7 @@ export function BookingFlow({ doctor }: { doctor: Doctor }) {
   const consultations = useConsultations((s) => s.consultations);
   const book = useConsultations((s) => s.book);
 
-  const schedule = useDoctorSchedule(doctor.id, doctor.availability, doctor.schedule);
+  const schedule = useMemo(() => scheduleOf(doctor.schedule), [doctor.schedule]);
   const instantAllowed = canStartInstantly(doctor.availability, schedule);
   const [step, setStep] = useState(0);
   const [mode, setMode] = useState<ConsultationMode>(instantAllowed ? "instant" : "scheduled");
@@ -79,17 +80,18 @@ export function BookingFlow({ doctor }: { doctor: Doctor }) {
   const [checkingOut, setCheckingOut] = useState(false);
   const [booked, setBooked] = useState<Consultation | null>(null);
   // The confirmation text: null while the booking is being saved.
-  const [sms, setSms] = useState<ConfirmationSms | { status: "error"; error: string } | null>(null);
+  const [sms, setSms] = useState<ConfirmationSms | null>(null);
+  // Why a free booking couldn't be saved.
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   const days = useMemo(
     () =>
-      slotsFor(
-        doctor.id,
-        schedule,
-        now,
-        consultations.filter((c) => c.doctorId === doctor.id).map((c) => c.startsAt),
-      ),
-    [doctor.id, schedule, now, consultations],
+      slotsFor(schedule, now, [
+        ...bookedStarts,
+        // Your own bookings made since the page opened.
+        ...consultations.filter((c) => c.doctorId === doctor.id && c.mode === "scheduled").map((c) => c.startsAt),
+      ]),
+    [doctor.id, schedule, now, consultations, bookedStarts],
   );
   // Start on the first day that still has an open slot.
   const dayIndex = dayChoice ?? Math.max(0, days.findIndex((d) => d.slots.some((s) => s.available)));
@@ -97,6 +99,23 @@ export function BookingFlow({ doctor }: { doctor: Doctor }) {
   const openConsultation = current && (current.state === "active" || current.state === "upcoming") ? current : null;
 
   if (booked) return <Confirmation consultation={booked} doctor={doctor} sms={sms} />;
+
+  if (saveError) {
+    return (
+      <Card className="mx-auto max-w-xl p-6 text-center sm:p-8">
+        <span className="mx-auto inline-flex size-14 items-center justify-center rounded-full bg-danger-soft text-danger">
+          <AlertTriangle className="size-7" />
+        </span>
+        <h2 className="mt-4 font-serif text-2xl font-semibold text-foreground">Your consultation wasn&apos;t booked</h2>
+        <p role="alert" className="mt-2 text-sm text-muted-foreground">
+          {saveError}
+        </p>
+        <Button className="mt-6" onClick={() => setSaveError(null)}>
+          Try again
+        </Button>
+      </Card>
+    );
+  }
 
   if (checkingOut) {
     return (
@@ -138,9 +157,16 @@ export function BookingFlow({ doctor }: { doctor: Doctor }) {
           });
           setBooked(consultation);
           // Save it on the backend, which texts the patient a confirmation.
+          // If it wasn't saved, it comes off your list again and you can try again.
+          const notSaved = (error: string) => {
+            useConsultations.getState().remove(consultation.id);
+            setBooked(null);
+            setCheckingOut(false);
+            setSaveError(error);
+          };
           confirmBookingAction(consultation, Intl.DateTimeFormat().resolvedOptions().timeZone).then(
-            (r) => setSms(r.sms ?? { status: "error", error: r.error ?? "Couldn't save your booking." }),
-            () => setSms({ status: "error", error: "Can't reach the server." }),
+            (r) => (r.sms ? setSms(r.sms) : notSaved(r.error ?? "Couldn't save your booking.")),
+            () => notSaved("Can't reach the server."),
           );
         }}
       />
@@ -469,15 +495,13 @@ function Row({ label, value }: { label: string; value: React.ReactNode }) {
   );
 }
 
-function SmsNote({ sms }: { sms: ConfirmationSms | { status: "error"; error: string } | null }) {
+function SmsNote({ sms }: { sms: ConfirmationSms | null }) {
   const text =
     sms === null
-      ? "Sending your confirmation text…"
+      ? "Saving your booking…"
       : sms.status === "sent"
         ? `Confirmation text sent to ${sms.to}`
-        : sms.status === "error"
-          ? `${sms.error} Your booking is still shown here.`
-          : "We couldn't text you a confirmation. Your booking is confirmed.";
+        : "We couldn't text you a confirmation. Your booking is confirmed.";
   return (
     <p
       role="status"
@@ -498,7 +522,7 @@ function Confirmation({
 }: {
   consultation: Consultation;
   doctor: Doctor;
-  sms: ConfirmationSms | { status: "error"; error: string } | null;
+  sms: ConfirmationSms | null;
 }) {
   const t = timeline(consultation, new Date(consultation.bookedAt));
   const instant = consultation.mode === "instant";

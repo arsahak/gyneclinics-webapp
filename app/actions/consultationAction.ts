@@ -93,3 +93,10 @@ export async function confirmCheckoutAction(paymentIntentId: string): Promise<{ 
   if (!result.ok || !result.data?.consultation) return { error: errorText(result) };
   return { booked: toBooked(result.data.consultation, result.data.sms) };
 }
+
+/** Times a doctor is booked for right now, to re-check a slot just before paying. */
+export async function bookedSlotsAction(doctorId: string): Promise<string[]> {
+  if (!/^[a-f\d]{24}$/i.test(doctorId)) return [];
+  const result = await api<string[]>(`/doctors/directory/${doctorId}/booked`);
+  return result.ok && result.data ? result.data : [];
+}

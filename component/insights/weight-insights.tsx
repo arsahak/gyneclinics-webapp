@@ -1,8 +1,8 @@
 "use client";
 
 import { format, parseISO } from "date-fns";
-import { Plus, Scale, Trash2, TrendingDown, TrendingUp } from "lucide-react";
-import { useState } from "react";
+import { Loader2, Plus, Scale, Trash2, TrendingDown, TrendingUp } from "lucide-react";
+import { useState, useTransition } from "react";
 import { EmptyState } from "@/component/shared/empty-state";
 import { Button } from "@/component/ui/button";
 import { Card, CardBody, CardHeader } from "@/component/ui/card";
@@ -18,6 +18,8 @@ export function WeightInsights() {
   const { weights, addWeight, deleteWeight } = useTracker();
   const [date, setDate] = useState(todayStr);
   const [kg, setKg] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [saving, startSaving] = useTransition();
 
   const sorted = [...weights].sort((a, b) => a.date.localeCompare(b.date));
   const latest = sorted.at(-1);
@@ -62,8 +64,12 @@ export function WeightInsights() {
               onSubmit={(e) => {
                 e.preventDefault();
                 if (!valid) return;
-                addWeight({ date, kg: Math.round(value * 10) / 10 });
-                setKg("");
+                setError(null);
+                startSaving(async () => {
+                  const failed = await addWeight({ date, kg: Math.round(value * 10) / 10 });
+                  if (failed) setError(failed);
+                  else setKg("");
+                });
               }}
             >
               <Field label="Date" htmlFor="w-date">
@@ -72,8 +78,13 @@ export function WeightInsights() {
               <Field label="Weight (kg)" htmlFor="w-kg">
                 <Input id="w-kg" type="number" inputMode="decimal" step="0.1" value={kg} onChange={(e) => setKg(e.target.value)} placeholder="61.5" />
               </Field>
-              <Button type="submit" className="w-full" disabled={!valid}>
-                <Plus /> Add entry
+              {error && (
+                <p role="alert" className="text-sm text-danger">
+                  {error}
+                </p>
+              )}
+              <Button type="submit" className="w-full" disabled={!valid || saving}>
+                {saving ? <Loader2 className="animate-spin" /> : <Plus />} Add entry
               </Button>
             </form>
           </CardBody>
@@ -87,7 +98,10 @@ export function WeightInsights() {
                   <span className="text-muted-foreground">{format(parseISO(w.date), "d MMM yyyy")}</span>
                   <span className="flex items-center gap-2">
                     <span className="font-medium text-foreground tabular-nums">{w.kg} kg</span>
-                    <Button variant="ghost" size="icon" aria-label="Delete entry" onClick={() => deleteWeight(w.id)} className="size-8">
+                    <Button variant="ghost" size="icon" aria-label="Delete entry" onClick={() => {
+                        setError(null);
+                        void deleteWeight(w.id).then(setError);
+                      }} className="size-8">
                       <Trash2 />
                     </Button>
                   </span>

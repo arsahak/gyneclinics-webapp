@@ -1,26 +1,25 @@
 import { create } from "zustand";
-import { createJSONStorage, persist } from "zustand/middleware";
+import { setBookmarkAction } from "@/app/actions/trackerAction";
 
-// Saved articles, kept in the browser. (Community stories live on the backend.)
+// Saved Learn articles, kept on the backend with the patient's profile.
+// Loaded with the patient area (see PortalData).
 
 interface LibraryState {
   bookmarks: string[];
-  toggleBookmark: (slug: string) => void;
+  load: (bookmarks: string[]) => void;
+  /** Saves or un-saves an article. Resolves to an error message, or null when saved. */
+  toggleBookmark: (slug: string) => Promise<string | null>;
 }
 
-export const useLibrary = create<LibraryState>()(
-  persist(
-    (set) => ({
-      bookmarks: ["understanding-your-fertile-window"],
-      toggleBookmark: (slug) =>
-        set((s) => ({
-          bookmarks: s.bookmarks.includes(slug) ? s.bookmarks.filter((b) => b !== slug) : [slug, ...s.bookmarks],
-        })),
-    }),
-    {
-      name: "gc-library",
-      storage: createJSONStorage(() => localStorage),
-      skipHydration: true,
-    },
-  ),
-);
+export const useLibrary = create<LibraryState>()((set, get) => ({
+  bookmarks: [],
+  load: (bookmarks) => set({ bookmarks }),
+  toggleBookmark: async (slug) => {
+    const before = get().bookmarks;
+    const save = !before.includes(slug);
+    set({ bookmarks: save ? [slug, ...before] : before.filter((b) => b !== slug) });
+    const result = await setBookmarkAction(slug, save);
+    set({ bookmarks: result.data ?? before });
+    return result.error ?? null;
+  },
+}));

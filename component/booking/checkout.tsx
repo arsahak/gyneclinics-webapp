@@ -4,15 +4,14 @@ import { Elements, PaymentElement, useElements, useStripe } from "@stripe/react-
 import { loadStripe, type Appearance, type Stripe } from "@stripe/stripe-js";
 import { format } from "date-fns";
 import { AlertTriangle, CalendarSearch, Check, Clock, Loader2, LockKeyhole, ShieldCheck, Timer, X } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
-import { type BookedResult, type CheckoutStart, confirmCheckoutAction, startCheckoutAction } from "@/app/actions/consultationAction";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { type BookedResult, bookedSlotsAction, type CheckoutStart, confirmCheckoutAction, startCheckoutAction } from "@/app/actions/consultationAction";
 import { Badge } from "@/component/ui/badge";
 import { Button } from "@/component/ui/button";
 import { Card } from "@/component/ui/card";
 import { CONSULTATION_POLICY, isSlotStillAvailable } from "@/lib/consultation";
 import { formatMoney, type RegionId } from "@/lib/locale/regions";
-import { useDoctorSchedule } from "@/lib/store/availability";
-import { useConsultations } from "@/lib/store/consultations";
+import { scheduleOf } from "@/lib/availability";
 import type { ConsultationMode, Doctor } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -78,7 +77,7 @@ export function Checkout({
   onSuccess: (result: CheckoutResult) => void;
   onCancel: (reason?: "slot") => void;
 }) {
-  const schedule = useDoctorSchedule(doctor.id, doctor.availability, doctor.schedule);
+  const schedule = useMemo(() => scheduleOf(doctor.schedule), [doctor.schedule]);
   const [stage, setStage] = useState<Stage>("checking");
   const [checkStep, setCheckStep] = useState(0);
   const [confirmStep, setConfirmStep] = useState(0);
@@ -103,11 +102,13 @@ export function Checkout({
         if (cancelled) return;
         setCheckStep(i);
       }
-      const booked = useConsultations.getState().consultations.filter((c) => c.doctorId === doctor.id).map((c) => c.startsAt);
+      // Fresh from the backend: someone may have taken the slot meanwhile.
+      const booked = mode === "scheduled" ? await bookedSlotsAction(doctor.id) : [];
+      if (cancelled) return;
       const ok =
         mode === "instant"
           ? doctor.availability === "online"
-          : !!slot && isSlotStillAvailable(doctor.id, schedule, slot, new Date(), booked);
+          : !!slot && isSlotStillAvailable(schedule, slot, new Date(), booked);
       await wait(300);
       if (cancelled) return;
       if (!ok) {

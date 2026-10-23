@@ -2,7 +2,6 @@ import "server-only";
 import { api } from "@/lib/api";
 import { hueFor } from "@/lib/chat";
 import type { DoctorSchedule } from "@/lib/availability";
-import { DEMO_DOCTOR_ID, doctors as demoDoctors, reviews as demoReviews } from "@/lib/mock/doctors";
 import type { Availability, Doctor, DoctorMessaging, Review } from "@/lib/types";
 
 // Doctors patients can browse and book: approved, active doctors from the
@@ -128,12 +127,18 @@ export async function getDoctorReviews(doctorId: string): Promise<{ reviews: Rev
   };
 }
 
-// ── Doctor app (still demo data until the doctor side uses the backend) ─────
-
-export async function getDemoDoctor(): Promise<Doctor | undefined> {
-  return demoDoctors.find((doctor) => doctor.id === DEMO_DOCTOR_ID);
+/** Start times this doctor is already booked for (so those slots show as taken). */
+export async function getBookedSlots(doctorId: string): Promise<string[]> {
+  if (!/^[a-f\d]{24}$/i.test(doctorId)) return [];
+  const result = await api<string[]>(`/doctors/directory/${doctorId}/booked`);
+  return result.ok && result.data ? result.data : [];
 }
 
-export async function getDemoDoctorReviews(): Promise<Review[]> {
-  return demoReviews.filter((review) => review.doctorId === DEMO_DOCTOR_ID);
+// ── The signed-in doctor ────────────────────────────────────────────────────
+
+/** Your own profile as patients see it (GET /doctors/me), with your saved schedule and online status. */
+export async function getMyDoctor(): Promise<(Doctor & { isOnline: boolean }) | undefined> {
+  const result = await api<BackendDoctor>("/doctors/me");
+  if (!result.ok || !result.data) return undefined;
+  return { ...toDoctor(result.data), isOnline: Boolean(result.data.isOnline) };
 }

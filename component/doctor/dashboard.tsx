@@ -1,9 +1,9 @@
 "use client";
 
-import { format, parseISO } from "date-fns";
+import { format, isSameMonth, parseISO } from "date-fns";
 import { ArrowRight, BadgeCheck, CalendarClock, Clock, MessagesSquare, Star, TrendingUp, Wallet } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { Stars } from "@/component/doctors/rating";
 import { useAccount } from "@/component/shared/account-provider";
 import { Avatar } from "@/component/ui/avatar";
@@ -17,15 +17,45 @@ import { useConsultations } from "@/lib/store/consultations";
 import type { ChatSummary } from "@/lib/chat";
 import type { Review } from "@/lib/types";
 import { NotificationBell } from "@/component/shared/notification-bell";
+import { setOnlineAction } from "@/app/actions/doctorAction";
 
-export function DoctorDashboard({ doctorId, chats, reviews, availableGBP }: { doctorId: string; chats: ChatSummary[]; reviews: Review[]; availableGBP: number | null }) {
+export function DoctorDashboard({
+  doctorId,
+  online: savedOnline,
+  rating,
+  chats,
+  latestReview,
+  availableGBP,
+}: {
+  doctorId: string;
+  /** Taking new chats now, as saved on the backend. */
+  online: boolean;
+  /** Average rating, or null before the first review. */
+  rating: number | null;
+  chats: ChatSummary[];
+  latestReview: Review | null;
+  availableGBP: number | null;
+}) {
   const { regions, fee } = usePricing();
   const { doctor } = useAccount();
-  // Not saved to the backend yet; resets on reload.
-  const [online, setOnline] = useState(true);
+  const [online, setOnline] = useState(savedOnline);
+  const [onlineError, setOnlineError] = useState<string | null>(null);
+  const [savingOnline, startSavingOnline] = useTransition();
   const [now] = useState(() => new Date());
   const allBookings = useConsultations((s) => s.consultations);
   if (!doctor) return null;
+
+  const toggleOnline = (next: boolean) => {
+    setOnline(next);
+    setOnlineError(null);
+    startSavingOnline(async () => {
+      const result = await setOnlineAction(next);
+      if (result.error) {
+        setOnline(!next);
+        setOnlineError(result.error);
+      }
+    });
+  };
 
   // Bookings arrive confirmed (auto-booking) — the doctor just sees what's coming up.
   const bookings = allBookings
@@ -37,8 +67,8 @@ export function DoctorDashboard({ doctorId, chats, reviews, availableGBP }: { do
   // From the backend: chats whose last message is the patient's are waiting for you.
   const awaiting = chats.filter((c) => c.lastFrom === "patient");
   const active = chats;
-  const avgRating = reviews.length ? reviews.reduce((s, r) => s + r.rating, 0) / reviews.length : 0;
-  const consultations = 38;
+  // Bookings that start this month (refunded ones don't count).
+  const thisMonth = allBookings.filter((c) => c.doctorId === doctorId && !c.refundedAt && isSameMonth(new Date(c.startsAt), now)).length;
   // Existing browser sessions created before availability moved into onboarding may not have this field yet.
   const availability = doctor.consultationAvailability ?? {
     weekdays: [0, 1, 2, 3, 4],
@@ -53,7 +83,7 @@ export function DoctorDashboard({ doctorId, chats, reviews, availableGBP }: { do
   const stats = [
     { icon: MessagesSquare, label: "Active chats", value: String(active.length), tone: "bg-primary-soft text-primary" },
     { icon: Clock, label: "Awaiting your reply", value: String(awaiting.length), tone: "bg-accent-soft text-accent" },
-    { icon: Star, label: "Average rating", value: avgRating ? avgRating.toFixed(1) : "—", tone: "bg-gold-soft text-gold" },
+    { icon: Star, label: "Average rating", value: rating ? rating.toFixed(1) : "—", tone: "bg-gold-soft text-gold" },
     { icon: Wallet, label: "Available to withdraw", value: availableGBP === null ? "—" : formatMoney(availableGBP, "GBP"), tone: "bg-secondary-soft text-secondary" },
   ];
 
@@ -83,9 +113,10 @@ export function DoctorDashboard({ doctorId, chats, reviews, availableGBP }: { do
             <div className="w-full rounded-2xl border border-white/80 bg-surface/80 p-4 shadow-[var(--shadow-soft)] backdrop-blur sm:w-80">
               <Switch
                 checked={online}
-                onChange={setOnline}
+                onChange={toggleOnline}
+                disabled={savingOnline}
                 label={online ? "You're online" : "You're offline"}
-                description={online ? "Patients can start new chats" : "New chats are paused"}
+                description={onlineError ?? (online ? "Patients can start new chats" : "New chats are paused")}
               />
             </div>
           </div>
@@ -154,6 +185,7 @@ export function DoctorDashboard({ doctorId, chats, reviews, availableGBP }: { do
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-medium text-foreground">{c.concern}</p>
                         <p className="text-xs text-muted-foreground">
+                          {c.patient ? `${c.patient.name} · ` : ""}
                           {c.mode === "instant" ? "Instant chat" : format(t.startsAt, "HH:mm")} · {c.id}
                         </p>
                       </div>
@@ -187,17 +219,17 @@ export function DoctorDashboard({ doctorId, chats, reviews, availableGBP }: { do
               }
             />
             <CardBody>
-              {reviews[0] ? (
+              {latestReview ? (
                 <>
-                  <Stars value={reviews[0].rating} />
-                  <p className="mt-2 text-sm text-foreground">“{reviews[0].text}”</p>
-                  <p className="mt-2 flex items-center gap-1 text-xs text-muted-foreground">
-                    <TrendingUp className="size-3.5 text-success" /> {consultations} consultations this month
-                  </p>
+                  <Stars value={latestReview.rating} />
+                  <p className="mt-2 text-sm text-foreground">“{latestReview.text}”</p>
                 </>
               ) : (
                 <p className="text-sm text-muted-foreground">No reviews yet.</p>
               )}
+              <p className="mt-2 flex items-center gap-1 text-xs text-muted-foreground">
+                <TrendingUp className="size-3.5 text-success" /> {thisMonth} consultation{thisMonth === 1 ? "" : "s"} this month
+              </p>
             </CardBody>
           </Card>
         </div>

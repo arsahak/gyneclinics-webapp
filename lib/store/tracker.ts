@@ -1,107 +1,108 @@
-import { addDays, format, subDays, subMonths } from "date-fns";
 import { create } from "zustand";
-import { createJSONStorage, persist } from "zustand/middleware";
+import {
+  addBabyGrowthAction,
+  addPeriodAction,
+  addWeightAction,
+  clearTrackerAction,
+  deleteBabyGrowthAction,
+  deletePeriodAction,
+  deleteWeightAction,
+  saveRemindersAction,
+  updatePeriodAction,
+} from "@/app/actions/trackerAction";
+import { EMPTY_TRACKER, type ReminderSettings, type TrackerData } from "@/lib/tracker";
 import type { BabyGrowthEntry, PeriodEntry, WeightEntry } from "@/lib/types";
-import { uid } from "@/lib/utils";
 
-export interface ReminderSettings {
-  periodReminder: boolean;
-  daysBefore: number;
-  fertileReminder: boolean;
-  dailyLogReminder: boolean;
+export type { ReminderSettings } from "@/lib/tracker";
+
+// The patient's periods, weights, scans and reminders. Loaded from the backend
+// with the patient area (see PortalData) and saved there on every change.
+// Changes show at once; if the backend refuses one, it's undone and the
+// action resolves to the error message (null when saved).
+
+type Saved = Promise<string | null>;
+
+interface TrackerState extends TrackerData {
+  load: (data: TrackerData) => void;
+  addPeriod: (entry: Omit<PeriodEntry, "id">) => Saved;
+  updatePeriod: (id: string, entry: Omit<PeriodEntry, "id">) => Saved;
+  deletePeriod: (id: string) => Saved;
+  addWeight: (entry: Omit<WeightEntry, "id">) => Saved;
+  deleteWeight: (id: string) => Saved;
+  addBabyGrowth: (entry: Omit<BabyGrowthEntry, "id">) => Saved;
+  deleteBabyGrowth: (id: string) => Saved;
+  setReminders: (reminders: Partial<ReminderSettings>) => Saved;
+  /** Deletes every period, weight and scan entry. */
+  clear: () => Saved;
 }
 
-interface TrackerState {
-  periods: PeriodEntry[];
-  weights: WeightEntry[];
-  babyGrowth: BabyGrowthEntry[];
-  reminders: ReminderSettings;
-  seeded: boolean;
-  addPeriod: (entry: Omit<PeriodEntry, "id">) => void;
-  updatePeriod: (id: string, entry: Omit<PeriodEntry, "id">) => void;
-  deletePeriod: (id: string) => void;
-  addWeight: (entry: Omit<WeightEntry, "id">) => void;
-  deleteWeight: (id: string) => void;
-  addBabyGrowth: (entry: Omit<BabyGrowthEntry, "id">) => void;
-  deleteBabyGrowth: (id: string) => void;
-  setReminders: (reminders: Partial<ReminderSettings>) => void;
-  seedDemo: () => void;
-  reset: () => void;
-}
+const tempId = () => `new_${Math.random().toString(36).slice(2, 10)}`;
 
-const day = (date: Date) => format(date, "yyyy-MM-dd");
+type ListKey = "periods" | "weights" | "babyGrowth";
+type Entry<K extends ListKey> = TrackerData[K][number];
 
-// Sample history relative to today so the demo always looks current.
-function buildDemoData(today: Date) {
-  const cycleLengths = [29, 27, 30, 28, 31, 28];
-  const periodLengths = [5, 5, 6, 4, 5, 5];
-  let start = subDays(today, 12);
-  const periods: PeriodEntry[] = [];
-  for (let i = 0; i < cycleLengths.length + 1; i++) {
-    const length = periodLengths[i % periodLengths.length];
-    periods.push({
-      id: uid("p"),
-      start: day(start),
-      end: day(addDays(start, length - 1)),
-      flow: i % 3 === 0 ? "heavy" : "medium",
-      symptoms: i % 2 === 0 ? ["Cramps", "Fatigue"] : ["Bloating"],
-    });
-    if (i < cycleLengths.length) start = subDays(start, cycleLengths[i]);
+export const useTracker = create<TrackerState>()((set, get) => {
+  /** Adds an entry now, then swaps in the saved one (or takes it out again). */
+  async function add<K extends ListKey>(key: K, entry: Omit<Entry<K>, "id">, save: () => Promise<{ data?: Entry<K>; error?: string }>) {
+    const id = tempId();
+    set({ [key]: [...get()[key], { ...entry, id }] } as Partial<TrackerState>);
+    const result = await save();
+    const list = get()[key] as Entry<K>[];
+    if (!result.data) {
+      set({ [key]: list.filter((e) => e.id !== id) } as Partial<TrackerState>);
+      return result.error ?? "Couldn't save. Please try again.";
+    }
+    set({ [key]: list.map((e) => (e.id === id ? result.data! : e)) } as Partial<TrackerState>);
+    return null;
   }
 
-  const weights: WeightEntry[] = [63.4, 63.1, 62.8, 62.9, 62.3, 61.9, 61.5].map((kg, i, all) => ({
-    id: uid("w"),
-    date: day(subMonths(today, all.length - 1 - i)),
-    kg,
-  }));
+  /** Removes an entry now; puts it back if the backend refuses. */
+  async function remove<K extends ListKey>(key: K, id: string, save: () => Promise<{ error?: string }>) {
+    const removed = (get()[key] as Entry<K>[]).find((e) => e.id === id);
+    if (!removed) return null;
+    set({ [key]: (get()[key] as Entry<K>[]).filter((e) => e.id !== id) } as Partial<TrackerState>);
+    const result = await save();
+    if (result.error) {
+      set({ [key]: [...(get()[key] as Entry<K>[]), removed] } as Partial<TrackerState>);
+      return result.error;
+    }
+    return null;
+  }
 
-  const scans: Array<[number, number, number]> = [
-    [12, 58, 6.1],
-    [16, 146, 11.6],
-    [20, 331, 16.4],
-    [24, 670, 30],
-    [28, 1150, 37.6],
-  ];
-  const babyGrowth: BabyGrowthEntry[] = scans.map(([week, weightG, lengthCm], i) => ({
-    id: uid("b"),
-    date: day(subDays(today, (scans.length - 1 - i) * 28)),
-    week,
-    weightG,
-    lengthCm,
-  }));
+  return {
+    ...EMPTY_TRACKER,
+    load: (data) => set(data),
 
-  return { periods, weights, babyGrowth };
-}
-
-const initial = {
-  periods: [] as PeriodEntry[],
-  weights: [] as WeightEntry[],
-  babyGrowth: [] as BabyGrowthEntry[],
-  reminders: { periodReminder: true, daysBefore: 2, fertileReminder: false, dailyLogReminder: false },
-  seeded: false,
-};
-
-export const useTracker = create<TrackerState>()(
-  persist(
-    (set) => ({
-      ...initial,
-      addPeriod: (entry) => set((s) => ({ periods: [...s.periods, { ...entry, id: uid("p") }] })),
-      updatePeriod: (id, entry) =>
-        set((s) => ({ periods: s.periods.map((p) => (p.id === id ? { ...entry, id } : p)) })),
-      deletePeriod: (id) => set((s) => ({ periods: s.periods.filter((p) => p.id !== id) })),
-      addWeight: (entry) => set((s) => ({ weights: [...s.weights, { ...entry, id: uid("w") }] })),
-      deleteWeight: (id) => set((s) => ({ weights: s.weights.filter((w) => w.id !== id) })),
-      addBabyGrowth: (entry) =>
-        set((s) => ({ babyGrowth: [...s.babyGrowth, { ...entry, id: uid("b") }] })),
-      deleteBabyGrowth: (id) => set((s) => ({ babyGrowth: s.babyGrowth.filter((b) => b.id !== id) })),
-      setReminders: (reminders) => set((s) => ({ reminders: { ...s.reminders, ...reminders } })),
-      seedDemo: () => set({ ...buildDemoData(new Date()), seeded: true }),
-      reset: () => set({ ...initial, seeded: true }),
-    }),
-    {
-      name: "gc-tracker",
-      storage: createJSONStorage(() => localStorage),
-      skipHydration: true,
+    addPeriod: (entry) => add("periods", entry, () => addPeriodAction(entry)),
+    updatePeriod: async (id, entry) => {
+      const before = get().periods.find((p) => p.id === id);
+      if (!before) return null;
+      set({ periods: get().periods.map((p) => (p.id === id ? { ...entry, id } : p)) });
+      const result = await updatePeriodAction(id, entry);
+      set({ periods: get().periods.map((p) => (p.id === id ? (result.data ?? before) : p)) });
+      return result.error ?? null;
     },
-  ),
-);
+    deletePeriod: (id) => remove("periods", id, () => deletePeriodAction(id)),
+
+    addWeight: (entry) => add("weights", entry, () => addWeightAction(entry)),
+    deleteWeight: (id) => remove("weights", id, () => deleteWeightAction(id)),
+
+    addBabyGrowth: (entry) => add("babyGrowth", entry, () => addBabyGrowthAction(entry)),
+    deleteBabyGrowth: (id) => remove("babyGrowth", id, () => deleteBabyGrowthAction(id)),
+
+    setReminders: async (changes) => {
+      const before = get().reminders;
+      set({ reminders: { ...before, ...changes } });
+      const result = await saveRemindersAction(changes);
+      set({ reminders: result.data ?? before });
+      return result.error ?? null;
+    },
+
+    clear: async () => {
+      const result = await clearTrackerAction();
+      if (result.error) return result.error;
+      set({ periods: [], weights: [], babyGrowth: [] });
+      return null;
+    },
+  };
+});

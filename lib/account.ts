@@ -23,6 +23,8 @@ export interface Account {
   patient: PatientProfile | null;
   doctor: DoctorProfileDraft | null;
   doctorStatus: DoctorVerificationStatus | null;
+  /** Patient: slugs of saved Learn articles, newest first. */
+  bookmarks: string[];
   nextStep: NextStep;
 }
 
@@ -118,6 +120,7 @@ export function toAccount(session: BackendSession): Account {
     patient: role === "patient" && profile ? toPatient(user.fullName, profile) : null,
     doctor: role === "doctor" && profile ? toDoctor(user.fullName, profile) : null,
     doctorStatus: role === "doctor" && profile ? (profile.verificationStatus as DoctorVerificationStatus) : null,
+    bookmarks: role === "patient" && Array.isArray(profile?.bookmarks) ? (profile.bookmarks as string[]) : [],
     nextStep,
   };
 }

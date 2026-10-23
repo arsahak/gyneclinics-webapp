@@ -1,8 +1,8 @@
 "use client";
 
 import { format, parseISO } from "date-fns";
-import { Baby, Plus, Ruler, Trash2, Weight } from "lucide-react";
-import { useState } from "react";
+import { Baby, Loader2, Plus, Ruler, Trash2, Weight } from "lucide-react";
+import { useState, useTransition } from "react";
 import { EmptyState } from "@/component/shared/empty-state";
 import { Button } from "@/component/ui/button";
 import { Card, CardBody, CardHeader } from "@/component/ui/card";
@@ -17,6 +17,8 @@ export function BabyInsights() {
   const todayStr = format(today, "yyyy-MM-dd");
   const { babyGrowth, addBabyGrowth, deleteBabyGrowth } = useTracker();
   const [form, setForm] = useState({ date: todayStr, week: "", weightG: "", lengthCm: "" });
+  const [error, setError] = useState<string | null>(null);
+  const [saving, startSaving] = useTransition();
 
   const sorted = [...babyGrowth].sort((a, b) => a.week - b.week);
   const latest = sorted.at(-1);
@@ -73,8 +75,12 @@ export function BabyInsights() {
               onSubmit={(e) => {
                 e.preventDefault();
                 if (!valid) return;
-                addBabyGrowth({ date: form.date, week, weightG, lengthCm });
-                setForm({ date: todayStr, week: "", weightG: "", lengthCm: "" });
+                setError(null);
+                startSaving(async () => {
+                  const failed = await addBabyGrowth({ date: form.date, week, weightG, lengthCm });
+                  if (failed) setError(failed);
+                  else setForm({ date: todayStr, week: "", weightG: "", lengthCm: "" });
+                });
               }}
             >
               <div className="grid grid-cols-2 gap-3">
@@ -91,8 +97,13 @@ export function BabyInsights() {
                   <Input id="b-length" type="number" step="0.1" min={1} value={form.lengthCm} onChange={(e) => setForm({ ...form, lengthCm: e.target.value })} placeholder="37.6" />
                 </Field>
               </div>
-              <Button type="submit" variant="secondary" className="w-full" disabled={!valid}>
-                <Plus /> Add measurement
+              {error && (
+                <p role="alert" className="text-sm text-danger">
+                  {error}
+                </p>
+              )}
+              <Button type="submit" variant="secondary" className="w-full" disabled={!valid || saving}>
+                {saving ? <Loader2 className="animate-spin" /> : <Plus />} Add measurement
               </Button>
             </form>
           </CardBody>
@@ -120,7 +131,10 @@ export function BabyInsights() {
                       <td className="py-2 text-right text-foreground tabular-nums">{b.weightG.toLocaleString("en-GB")} g</td>
                       <td className="py-2 text-right text-foreground tabular-nums">{b.lengthCm} cm</td>
                       <td className="py-2 text-right">
-                        <Button variant="ghost" size="icon" aria-label="Delete measurement" onClick={() => deleteBabyGrowth(b.id)} className="size-8">
+                        <Button variant="ghost" size="icon" aria-label="Delete measurement" onClick={() => {
+                            setError(null);
+                            void deleteBabyGrowth(b.id).then(setError);
+                          }} className="size-8">
                           <Trash2 />
                         </Button>
                       </td>

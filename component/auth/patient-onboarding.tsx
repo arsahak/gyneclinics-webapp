@@ -1,12 +1,11 @@
 "use client";
 
-import { addDays, format, parseISO } from "date-fns";
+import { format } from "date-fns";
 import { ArrowLeft, ArrowRight, Loader2 } from "lucide-react";
 import { useState, useTransition } from "react";
 import { Button } from "@/component/ui/button";
 import { Field, Input } from "@/component/ui/field";
 import { completePatientOnboarding } from "@/app/actions/profileAction";
-import { useTracker } from "@/lib/store/tracker";
 import type { PatientProfile, PregnancyStatus } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { StepHeader } from "./step-header";
@@ -48,16 +47,7 @@ export function PatientOnboarding({ fullName }: { fullName: string }) {
 
   const finish = () => {
     setError(null);
-    // The cycle log still lives in this browser; start it from the onboarding answers.
-    const tracker = useTracker.getState();
-    tracker.reset();
-    if (form.lastPeriodStart) {
-      tracker.addPeriod({
-        start: form.lastPeriodStart,
-        end: format(addDays(parseISO(form.lastPeriodStart), form.typicalPeriodLength - 1), "yyyy-MM-dd"),
-      });
-    }
-    tracker.addWeight({ date: today, kg: form.weightKg });
+    // The backend starts the period and weight logs from these answers.
     startSaving(async () => {
       // Redirects to the consent step on success.
       const result = await completePatientOnboarding(form);

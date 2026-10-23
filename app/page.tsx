@@ -18,6 +18,7 @@ import { Container, Section, SectionHeading } from "@/component/landing/layout";
 import { SiteFooter } from "@/component/landing/site-footer";
 import { TypingTitle } from "@/component/landing/typing-title";
 import { LandingNav, TopBar } from "@/component/layout/landing-nav";
+import { NavAccount } from "@/component/layout/nav-account";
 import { Faq } from "@/component/shared/faq";
 import { ButtonLink } from "@/component/ui/button";
 import { APP_NAME, SUPPORT_EMAIL } from "@/lib/brand";
@@ -38,7 +39,7 @@ export default function Landing() {
   return (
     <div className="flex min-h-full flex-1 flex-col">
       <TopBar />
-      <LandingNav />
+      <LandingNav account={<NavAccount />} />
 
       <main className="flex-1">
         {/* Hero */}

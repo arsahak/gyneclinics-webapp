@@ -4,6 +4,7 @@ import { refresh } from "next/cache";
 import { redirect } from "next/navigation";
 import { getAccessToken } from "@/auth";
 import { api, errorText } from "@/lib/api";
+import type { DoctorSchedule } from "@/lib/availability";
 import type { DoctorMessaging, DoctorVerificationStatus } from "@/lib/types";
 
 // The signed-in doctor's own profile: GET and PATCH /doctors/me.
@@ -155,4 +156,20 @@ export async function updateMyDoctorProfile(
     inReview: Boolean(result.data.inReview),
     reverification: Boolean(result.data.reverification),
   };
+}
+
+/** Whether the doctor is taking new chats now (shown to patients as "Online"). */
+export async function setOnlineAction(isOnline: boolean): Promise<{ error?: string }> {
+  await ensureSignedIn();
+  const result = await api("/doctors/me", { method: "PATCH", body: { isOnline } });
+  return result.ok ? {} : { error: errorText(result) };
+}
+
+/** Saves the weekly hours, slot length, booking window, notice and days off. Live straight away. */
+export async function saveScheduleAction(schedule: DoctorSchedule): Promise<{ error?: string }> {
+  await ensureSignedIn();
+  const result = await api("/doctors/me", { method: "PATCH", body: { schedule } });
+  if (!result.ok) return { error: errorText(result) };
+  refresh();
+  return {};
 }

@@ -1,8 +1,8 @@
 "use client";
 
 import { format, isToday, isTomorrow, parseISO } from "date-fns";
-import { CalendarOff, CheckCircle2, Copy, Eye, Plus, Trash2, X, Zap } from "lucide-react";
-import { useMemo, useState } from "react";
+import { CalendarOff, CheckCircle2, Copy, Eye, Loader2, Plus, Trash2, X, Zap } from "lucide-react";
+import { useMemo, useState, useTransition } from "react";
 import { Badge } from "@/component/ui/badge";
 import { Button } from "@/component/ui/button";
 import { Card, CardBody, CardHeader } from "@/component/ui/card";
@@ -10,6 +10,7 @@ import { Field, Input, Select, Switch } from "@/component/ui/field";
 import {
   BOOKING_WINDOWS,
   MIN_NOTICE,
+  scheduleOf,
   SLOT_LENGTHS,
   slotsFor,
   TIME_OPTIONS,
@@ -21,7 +22,7 @@ import {
   type TimeRange,
 } from "@/lib/availability";
 import { useNow } from "@/lib/hooks";
-import { useAvailability, useDoctorSchedule } from "@/lib/store/availability";
+import { saveScheduleAction } from "@/app/actions/doctorAction";
 import type { Doctor } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -47,15 +48,33 @@ function nextRange(ranges: TimeRange[]): TimeRange {
 
 export function AvailabilityEditor({ doctor }: { doctor: Doctor }) {
   const now = useNow();
-  const saved = useDoctorSchedule(doctor.id, doctor.availability);
-  const saveSchedule = useAvailability((s) => s.saveSchedule);
+  // What's saved on the backend; updated here after each save.
+  const [saved, setSaved] = useState<DoctorSchedule>(() => scheduleOf(doctor.schedule));
   const [draft, setDraft] = useState<DoctorSchedule>(saved);
   const [justSaved, setJustSaved] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [saving, startSaving] = useTransition();
   const [offDate, setOffDate] = useState("");
 
   const update = (next: Partial<DoctorSchedule>) => {
     setDraft((d) => ({ ...d, ...next }));
     setJustSaved(false);
+    setSaveError(null);
+  };
+
+  const save = () => {
+    const next = { ...draft, timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || draft.timezone };
+    setSaveError(null);
+    startSaving(async () => {
+      const result = await saveScheduleAction(next);
+      if (result.error) {
+        setSaveError(result.error);
+        return;
+      }
+      setSaved(next);
+      setDraft(next);
+      setJustSaved(true);
+    });
   };
   const setDay = (day: number, ranges: TimeRange[]) => update({ weekly: draft.weekly.map((r, i) => (i === day ? ranges : r)) });
 
@@ -65,7 +84,7 @@ export function AvailabilityEditor({ doctor }: { doctor: Doctor }) {
   const today = format(now, "yyyy-MM-dd");
   const upcomingOff = draft.timeOff.filter((d) => d >= today).sort();
 
-  const preview = useMemo(() => (hasErrors ? [] : slotsFor(doctor.id, draft, now).slice(0, 7)), [doctor.id, draft, now, hasErrors]);
+  const preview = useMemo(() => (hasErrors ? [] : slotsFor(draft, now).slice(0, 7)), [draft, now, hasErrors]);
 
   return (
     <>
@@ -87,17 +106,22 @@ export function AvailabilityEditor({ doctor }: { doctor: Doctor }) {
               Discard
             </Button>
           )}
-          <Button
-            disabled={!dirty || hasErrors}
-            onClick={() => {
-              saveSchedule(doctor.id, draft);
-              setJustSaved(true);
-            }}
-          >
-            Save changes
+          <Button disabled={!dirty || hasErrors || saving} onClick={save}>
+            {saving ? (
+              <>
+                <Loader2 className="animate-spin" /> Saving…
+              </>
+            ) : (
+              "Save changes"
+            )}
           </Button>
         </div>
       </div>
+      {saveError && (
+        <p role="alert" className="mb-6 rounded-2xl bg-danger-soft p-4 text-sm text-danger">
+          {saveError}
+        </p>
+      )}
 
       <div className="grid gap-6 xl:grid-cols-[1fr_360px]">
         <div className="min-w-0 space-y-6">

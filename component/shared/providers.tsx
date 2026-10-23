@@ -5,25 +5,25 @@ import { getPricingAction } from "@/app/actions/pricingAction";
 import { detectLocation } from "@/lib/locale/detect";
 import { trackAppOpen } from "@/lib/services/analytics";
 import { useAppStatus } from "@/lib/store/app-status";
-import { useAvailability } from "@/lib/store/availability";
-import { useConsultations } from "@/lib/store/consultations";
-import { useLibrary } from "@/lib/store/library";
 import { useLocaleStore } from "@/lib/store/locale";
 import { usePricingStore } from "@/lib/store/pricing";
-import { useTracker } from "@/lib/store/tracker";
 
 const SESSION_FLAG = "gc-open-tracked";
+// Older versions kept the tracker, bookings, saved articles and schedules in
+// this browser (with sample data). They live on the backend now.
+const OLD_KEYS = ["gc-tracker", "gc-consultations", "gc-library", "gc-availability"];
 
-/** Loads persisted state and records where the app was opened from (once per browser session). */
+/** Loads saved settings (region, prices) and records where the app was opened from (once per browser session). */
 export function Providers({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let cancelled = false;
+    try {
+      for (const key of OLD_KEYS) localStorage.removeItem(key);
+    } catch {
+      // storage unavailable — nothing to clean up
+    }
 
     Promise.all([
-      useTracker.persist.rehydrate(),
-      useLibrary.persist.rehydrate(),
-      useConsultations.persist.rehydrate(),
-      useAvailability.persist.rehydrate(),
       useLocaleStore.persist.rehydrate(),
       usePricingStore.persist.rehydrate(),
     ]).then(() => {
@@ -34,7 +34,6 @@ export function Providers({ children }: { children: React.ReactNode }) {
           if (multipliers && !cancelled) usePricingStore.getState().setMultipliers(multipliers);
         })
         .catch(() => undefined);
-      if (!useTracker.getState().seeded) useTracker.getState().seedDemo();
       useAppStatus.setState({ hydrated: true });
 
       let alreadyTracked = false;

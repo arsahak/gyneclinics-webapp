@@ -11,6 +11,7 @@ import { RegionChip } from "@/component/shared/region";
 import { ThemeToggle } from "@/component/shared/theme-toggle";
 import { Avatar } from "@/component/ui/avatar";
 import { Skeleton } from "@/component/ui/skeleton";
+import { PortalPageSkeleton } from "@/component/layout/portal-skeletons";
 import { signOutAction } from "@/app/actions/authAction";
 import { useHydrated } from "@/lib/store/app-status";
 import type { Role } from "@/lib/types";
@@ -84,28 +85,7 @@ export function AppShell({ role, children }: { role: Role; children: ReactNode }
         <div className="flex h-16 items-center px-6">
           <Logo href={home} tone="inverse" />
         </div>
-        <nav className="flex-1 space-y-1 px-3 py-4">
-          {nav.map(({ href, label, icon: Icon, excludeActiveWhen }) => {
-            const active = isActive(pathname, href, home) && !excludeActiveWhen?.some((path) => pathname.startsWith(path));
-            return (
-              <Link
-                key={href}
-                href={href}
-                aria-current={active ? "page" : undefined}
-                className={cn(
-                  "flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-medium transition-colors",
-                  active
-                    ? "bg-white/15 text-white shadow-[0_6px_18px_rgb(0_0_0/0.12)]"
-                    : "text-white/65 hover:bg-white/10 hover:text-white",
-                )}
-              >
-                <Icon className="size-5" />
-                {label}
-                {href.endsWith("/notifications") && <UnreadBadge className="ml-auto" />}
-              </Link>
-            );
-          })}
-        </nav>
+        <SidebarNav nav={nav} pathname={pathname} home={home} />
         <div className="space-y-3 border-t border-white/10 p-4">
           <div className="flex items-center justify-between">
             <RegionChip tone="inverse" />
@@ -154,65 +134,117 @@ export function AppShell({ role, children }: { role: Role; children: ReactNode }
         </header>
 
         <main className="mx-auto w-full max-w-6xl flex-1 px-4 pt-6 pb-28 sm:px-6 lg:px-10 lg:pt-10 lg:pb-12">
-          {ready ? children : <PageSkeleton />}
+          {ready ? children : <PortalPageSkeleton role={role} />}
         </main>
 
         {/* Mobile bottom nav */}
-        {nav.length > 0 && (
-          <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-surface/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-md lg:hidden">
-            <div className="mx-auto flex max-w-lg justify-around px-2">
-              {nav
-                .filter((item) => item.mobile)
-                .map(({ href, label, icon: Icon }) => {
-                  const active = isActive(pathname, href, home);
-                  return (
-                    <Link
-                      key={href}
-                      href={href}
-                      aria-current={active ? "page" : undefined}
-                      className={cn(
-                        "flex flex-1 flex-col items-center gap-1 py-2.5 text-[11px] font-medium transition-colors",
-                        active ? "text-primary" : "text-muted-foreground",
-                      )}
-                    >
-                      <span className={cn("rounded-full px-4 py-1 transition-colors", active && "bg-primary-soft")}>
-                        <Icon className="size-5" />
-                      </span>
-                      {label}
-                    </Link>
-                  );
-                })}
-            </div>
-          </nav>
-        )}
+        {nav.length > 0 && <BottomNav nav={nav} pathname={pathname} home={home} />}
       </div>
     </div>
   );
 }
 
-function PageSkeleton() {
+/** Desktop sidebar links. Nothing is highlighted while `pathname` is empty. */
+function SidebarNav({ nav, pathname, home }: { nav: NavItem[]; pathname: string; home: string }) {
   return (
-    <div className="space-y-4">
-      <Skeleton className="h-10 w-64" />
-      <Skeleton className="h-48" />
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Skeleton className="h-32" />
-        <Skeleton className="h-32" />
-      </div>
-    </div>
+    <nav className="flex-1 space-y-1 px-3 py-4">
+      {nav.map(({ href, label, icon: Icon, excludeActiveWhen }) => {
+        const active = isActive(pathname, href, home) && !excludeActiveWhen?.some((path) => pathname.startsWith(path));
+        return (
+          <Link
+            key={href}
+            href={href}
+            aria-current={active ? "page" : undefined}
+            className={cn(
+              "flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-medium transition-colors",
+              active
+                ? "bg-white/15 text-white shadow-[0_6px_18px_rgb(0_0_0/0.12)]"
+                : "text-white/65 hover:bg-white/10 hover:text-white",
+            )}
+          >
+            <Icon className="size-5" />
+            {label}
+            {pathname && href.endsWith("/notifications") && <UnreadBadge className="ml-auto" />}
+          </Link>
+        );
+      })}
+    </nav>
   );
 }
 
-/** Shown while the server checks the session. Matches the shell's layout so nothing jumps. */
-export function AppShellSkeleton() {
+/** Mobile bottom bar (items marked `mobile`). */
+function BottomNav({ nav, pathname, home }: { nav: NavItem[]; pathname: string; home: string }) {
+  return (
+    <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-surface/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-md lg:hidden">
+      <div className="mx-auto flex max-w-lg justify-around px-2">
+        {nav
+          .filter((item) => item.mobile)
+          .map(({ href, label, icon: Icon }) => {
+            const active = isActive(pathname, href, home);
+            return (
+              <Link
+                key={href}
+                href={href}
+                aria-current={active ? "page" : undefined}
+                className={cn(
+                  "flex flex-1 flex-col items-center gap-1 py-2.5 text-[11px] font-medium transition-colors",
+                  active ? "text-primary" : "text-muted-foreground",
+                )}
+              >
+                <span className={cn("rounded-full px-4 py-1 transition-colors", active && "bg-primary-soft")}>
+                  <Icon className="size-5" />
+                </span>
+                {label}
+              </Link>
+            );
+          })}
+      </div>
+    </nav>
+  );
+}
+
+/**
+ * Shown while the server checks the session. The logo and menu are already in
+ * place, so only the profile and page content fill in afterwards.
+ */
+export function AppShellSkeleton({ role }: { role: Role }) {
+  const nav = NAV[role];
+  const home = HOME[role];
   return (
     <div className="flex min-h-full flex-1">
-      <aside className="sticky top-0 hidden h-dvh w-64 shrink-0 border-r border-white/10 bg-gradient-to-b from-[#174f57] via-[#123b52] to-[#0a2342] lg:block" />
+      <aside className="sticky top-0 hidden h-dvh w-64 shrink-0 flex-col border-r border-white/10 bg-gradient-to-b from-[#174f57] via-[#123b52] to-[#0a2342] lg:flex">
+        <div className="flex h-16 items-center px-6">
+          <Logo href={home} tone="inverse" />
+        </div>
+        <SidebarNav nav={nav} pathname="" home={home} />
+        <div className="space-y-3 border-t border-white/10 p-4">
+          <div className="flex items-center justify-between">
+            <Skeleton inverse round className="h-7 w-24" />
+            <Skeleton inverse round className="size-9" />
+          </div>
+          <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/10 p-2.5">
+            <Skeleton inverse round className="size-9 shrink-0" />
+            <div className="min-w-0 flex-1 space-y-2">
+              <Skeleton inverse round className="h-3 w-28" />
+              <Skeleton inverse round className="h-2.5 w-20" />
+            </div>
+          </div>
+        </div>
+      </aside>
+
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="h-14 border-b border-border bg-background/85 lg:hidden" />
+        <header className="sticky top-0 z-30 flex h-14 items-center justify-between gap-2 border-b border-border bg-background/85 px-4 backdrop-blur-md lg:hidden">
+          <Logo href={home} />
+          <div className="flex items-center gap-2">
+            <Skeleton round className="size-9" />
+            <Skeleton round className="size-9" />
+            <Skeleton round className="size-9" />
+          </div>
+        </header>
         <main className="mx-auto w-full max-w-6xl flex-1 px-4 pt-6 pb-28 sm:px-6 lg:px-10 lg:pt-10 lg:pb-12">
-          <PageSkeleton />
+          <PortalPageSkeleton role={role} />
         </main>
+        <BottomNav nav={nav} pathname="" home={home} />
       </div>
     </div>
   );

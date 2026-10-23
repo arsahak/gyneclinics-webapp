@@ -1,7 +1,8 @@
 "use client";
 
 import { addDays, format, parseISO } from "date-fns";
-import { useState } from "react";
+import { useState, useTransition } from "react";
+import { Loader2 } from "lucide-react";
 import { Button } from "@/component/ui/button";
 import { Dialog } from "@/component/ui/dialog";
 import { Field, Input, Textarea } from "@/component/ui/field";
@@ -47,6 +48,8 @@ function PeriodForm({ entry, defaultStart, onDone }: { entry?: PeriodEntry; defa
   const [flow, setFlow] = useState<Flow | undefined>(entry?.flow ?? "medium");
   const [symptoms, setSymptoms] = useState<string[]>(entry?.symptoms ?? []);
   const [note, setNote] = useState(entry?.note ?? "");
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [saving, startSaving] = useTransition();
 
   const overlaps = periods.some((p) => {
     if (p.id === entry?.id) return false;
@@ -62,12 +65,20 @@ function PeriodForm({ entry, defaultStart, onDone }: { entry?: PeriodEntry; defa
   else if (end && end > todayStr) error = "End date can't be in the future.";
   else if (overlaps) error = "These dates overlap with another logged period.";
 
+  // Saved on the backend; the dialog closes once it's there.
+  const run = (task: () => Promise<string | null>) => {
+    setSaveError(null);
+    startSaving(async () => {
+      const failed = await task();
+      if (failed) setSaveError(failed);
+      else onDone();
+    });
+  };
+
   const save = () => {
     if (error) return;
     const data = { start, end: end || undefined, flow, symptoms, note: note.trim() || undefined };
-    if (entry) updatePeriod(entry.id, data);
-    else addPeriod(data);
-    onDone();
+    run(() => (entry ? updatePeriod(entry.id, data) : addPeriod(data)));
   };
 
   return (
@@ -131,22 +142,28 @@ function PeriodForm({ entry, defaultStart, onDone }: { entry?: PeriodEntry; defa
         <Textarea id="note" value={note} onChange={(e) => setNote(e.target.value)} className="min-h-20" placeholder="Anything you'd like to remember" />
       </Field>
 
-      {error && <p className="text-sm text-danger">{error}</p>}
+      {(error ?? saveError) && (
+        <p role="alert" className="text-sm text-danger">
+          {error ?? saveError}
+        </p>
+      )}
 
       <div className="flex gap-3">
         {entry && (
-          <Button
-            variant="danger"
-            onClick={() => {
-              deletePeriod(entry.id);
-              onDone();
-            }}
-          >
+          <Button variant="danger" disabled={saving} onClick={() => run(() => deletePeriod(entry.id))}>
             Delete
           </Button>
         )}
-        <Button className="flex-1" disabled={!!error} onClick={save}>
-          {entry ? "Save changes" : "Save period"}
+        <Button className="flex-1" disabled={!!error || saving} onClick={save}>
+          {saving ? (
+            <>
+              <Loader2 className="animate-spin" /> Saving…
+            </>
+          ) : entry ? (
+            "Save changes"
+          ) : (
+            "Save period"
+          )}
         </Button>
       </div>
     </div>
