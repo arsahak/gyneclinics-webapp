@@ -10,8 +10,13 @@ import { AdBanner } from "@/component/shared/ad-banner";
 import { getArticles } from "@/lib/services/content";
 import { getDoctors } from "@/lib/services/doctors";
 import { NotificationBell } from "@/component/shared/notification-bell";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = { title: "Home" };
+export const metadata: Metadata = pageMetadata({
+  title: "Home",
+  description: "Your cycle at a glance, upcoming consultations and articles picked for you.",
+  path: "/patient",
+});
 
 // The layout checks the session on the server, so this page is rendered per request.
 export const instant = false;

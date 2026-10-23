@@ -13,8 +13,20 @@ import { Avatar } from "@/component/ui/avatar";
 import { Badge } from "@/component/ui/badge";
 import { Card } from "@/component/ui/card";
 import { getDoctor, getDoctorReviews } from "@/lib/services/doctors";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = { title: "Specialist" };
+/** "Dr. Jane Smith — Reproductive Medicine", with her title, city, experience and bio. */
+export async function generateMetadata({ params }: PageProps<"/patient/doctors/[id]">): Promise<Metadata> {
+  const doctor = await getDoctor((await params).id);
+  if (!doctor) return { title: "Specialist not found" };
+  const where = doctor.city ? ` in ${doctor.city}` : "";
+  return pageMetadata({
+    title: `${doctor.name} — ${doctor.specialization}`,
+    description: `${doctor.title}${where} with ${doctor.experienceYears} years' experience. ${doctor.about}`,
+    path: `/patient/doctors/${doctor.id}`,
+    type: "profile",
+  });
+}
 
 // The layout checks the session on the server, so this page is rendered per request.
 export const instant = false;

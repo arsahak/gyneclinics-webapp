@@ -40,7 +40,7 @@ const SOCIALS = [
 
 export function SiteFooter() {
   return (
-    <footer className="relative overflow-hidden bg-[#0d2838] text-white">
+    <footer className="relative overflow-hidden bg-[#24142b] text-white">
       {/* Brand glows */}
       <div aria-hidden className="pointer-events-none absolute -top-40 left-1/4 size-[520px] rounded-full bg-accent/16 blur-[140px]" />
       <div aria-hidden className="pointer-events-none absolute -right-32 bottom-0 size-[460px] rounded-full bg-secondary/20 blur-[140px]" />

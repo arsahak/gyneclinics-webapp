@@ -2,8 +2,13 @@ import type { Metadata } from "next";
 import { DoctorEarnings } from "@/component/doctor/earnings";
 import { PageHeader } from "@/component/shared/page-header";
 import { getMyEarnings } from "@/lib/services/payouts";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = { title: "Earnings" };
+export const metadata: Metadata = pageMetadata({
+  title: "Earnings",
+  description: "Your share of each consultation and your withdrawals through Stripe.",
+  path: "/doctor/earnings",
+});
 
 // The layout checks the session on the server, so this page is rendered per request.
 export const instant = false;

@@ -4,8 +4,13 @@ import { PageHeader } from "@/component/shared/page-header";
 import { getMyChats } from "@/lib/services/chats";
 import { getDoctorReviews, getMyDoctor } from "@/lib/services/doctors";
 import { getMyEarnings } from "@/lib/services/payouts";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = { title: "Dashboard" };
+export const metadata: Metadata = pageMetadata({
+  title: "Dashboard",
+  description: "Today's consultations, patients waiting for your reply and your earnings at a glance.",
+  path: "/doctor",
+});
 
 // The layout checks the session on the server, so this page is rendered per request.
 export const instant = false;

@@ -2,8 +2,13 @@ import type { Metadata } from "next";
 import { ConversationList } from "@/component/chat/conversation-list";
 import { PageHeader } from "@/component/shared/page-header";
 import { getMyChats } from "@/lib/services/chats";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = { title: "Messages" };
+export const metadata: Metadata = pageMetadata({
+  title: "Messages",
+  description: "Your private conversations with patients.",
+  path: "/doctor/messages",
+});
 
 // The layout checks the session on the server, so this page is rendered per request.
 export const instant = false;

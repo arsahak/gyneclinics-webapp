@@ -1,6 +1,6 @@
-# GyneClinics — Patient & Doctor Web (UI)
+# GyneX — Patient & Doctor Web (UI)
 
-Web version of the GyneClinics patient and doctor apps. Sign-in and accounts use the Gyneclinics backend
+Web version of the GyneX patient and doctor apps. Sign-in and accounts use the Gyneclinics backend
 through Auth.js; the cycle log, chats and consultations are still mock data kept in the browser (localStorage).
 
 ```bash

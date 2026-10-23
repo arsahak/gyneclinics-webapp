@@ -9,14 +9,14 @@ import type { AppRole } from "@/lib/types";
 import { StepHeader } from "./step-header";
 
 const PATIENT_TERMS = [
-  "GyneClinics provides general health information and guidance. It does not diagnose, treat or prevent any medical condition.",
+  "GyneX provides general health information and guidance. It does not diagnose, treat or prevent any medical condition.",
   "Cycle predictions, fertile windows and other insights are estimates based only on the data you enter. They are not a form of contraception.",
-  "Doctors on GyneClinics give advice through chat, which does not replace an in-person examination.",
+  "Doctors on GyneX give advice through chat, which does not replace an in-person examination.",
   "In an emergency, call your local emergency number or go to the nearest hospital.",
 ];
 
 const DOCTOR_TERMS = [
-  "Advice given through GyneClinics is informational and does not replace an in-person consultation or examination.",
+  "Advice given through GyneX is informational and does not replace an in-person consultation or examination.",
   "You will not request or share personal contact details, or move conversations outside the platform.",
   "Your registration and documents will be verified by our team before your profile is visible to patients.",
   "Chat metadata may be monitored for safety and compliance. Message content stays private.",
@@ -62,7 +62,7 @@ export function ConsentForm({ role }: { role: AppRole }) {
         <Checkbox
           checked={data}
           onChange={(e) => setData(e.target.checked)}
-          label="I consent to GyneClinics processing my health data"
+          label="I consent to GyneX processing my health data"
           description="Your data is encrypted, used only to provide the service, and never sold. You can export or delete it at any time."
         />
       </div>

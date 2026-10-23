@@ -2,8 +2,13 @@ import type { Metadata } from "next";
 import { NotificationInbox } from "@/component/shared/notification-inbox";
 import { PageHeader } from "@/component/shared/page-header";
 import { getMyNotifications } from "@/lib/services/notifications";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = { title: "Notifications" };
+export const metadata: Metadata = pageMetadata({
+  title: "Notifications",
+  description: "Updates about your account, bookings and news from GyneX.",
+  path: "/doctor/notifications",
+});
 
 // The layout checks the session on the server, so this page is rendered per request.
 export const instant = false;
@@ -12,7 +17,7 @@ export default async function DoctorNotificationsPage() {
   const inbox = await getMyNotifications();
   return (
     <>
-      <PageHeader title="Notifications" description="Updates about your account and news from GyneClinics." />
+      <PageHeader title="Notifications" description="Updates about your account and news from GyneX." />
       {inbox ? (
         <NotificationInbox initialItems={inbox.items} initialUnread={inbox.unread} />
       ) : (

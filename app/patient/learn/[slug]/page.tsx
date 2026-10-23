@@ -11,12 +11,28 @@ import { Disclaimer } from "@/component/shared/disclaimer";
 import { Badge } from "@/component/ui/badge";
 import { ButtonLink } from "@/component/ui/button";
 import { getArticle, getArticles } from "@/lib/services/content";
+import { pageMetadata } from "@/lib/seo";
 
 /** Typography for the article HTML from the backend (matches the section layout). */
 const ARTICLE_HTML =
   "[&_a]:text-primary [&_a]:underline [&_blockquote]:border-l-4 [&_blockquote]:border-primary/30 [&_blockquote]:pl-4 [&_blockquote]:italic [&_h1]:font-serif [&_h1]:text-3xl [&_h1]:font-semibold [&_h1]:text-foreground [&_h2]:mt-8 [&_h2]:mb-2 [&_h2]:font-serif [&_h2]:text-2xl [&_h2]:font-semibold [&_h2]:text-foreground [&_h3]:mt-6 [&_h3]:mb-2 [&_h3]:text-xl [&_h3]:font-semibold [&_h3]:text-foreground [&_img]:my-6 [&_img]:rounded-2xl [&_li]:my-1 [&_ol]:list-decimal [&_ol]:pl-6 [&_p]:my-4 [&_strong]:font-semibold [&_strong]:text-foreground [&_table]:w-full [&_td]:border [&_td]:border-border [&_td]:p-2 [&_th]:border [&_th]:border-border [&_th]:p-2 [&_ul]:list-disc [&_ul]:pl-6";
 
-export const metadata: Metadata = { title: "Article" };
+/** The article's own title and summary, shared as an article with its author and date. */
+export async function generateMetadata({ params }: PageProps<"/patient/learn/[slug]">): Promise<Metadata> {
+  const article = await getArticle((await params).slug);
+  if (!article) return { title: "Article not found" };
+  const base = pageMetadata({
+    title: article.title,
+    description: article.excerpt || article.title,
+    path: `/patient/learn/${article.slug}`,
+    type: "article",
+  });
+  return {
+    ...base,
+    authors: [{ name: article.author }],
+    openGraph: { ...base.openGraph, type: "article", publishedTime: article.publishedAt, authors: [article.author], section: article.category },
+  };
+}
 
 // The layout checks the session on the server, so this page is rendered per request.
 export const instant = false;

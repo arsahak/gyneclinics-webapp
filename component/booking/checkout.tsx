@@ -40,9 +40,9 @@ function stripeAppearance(): Appearance {
   return {
     theme: dark ? "night" : "stripe",
     variables: {
-      colorPrimary: v("--primary", "#2b7d85"),
-      colorBackground: v("--surface", dark ? "#10232e" : "#ffffff"),
-      colorText: v("--foreground", dark ? "#e7f0f2" : "#12334b"),
+      colorPrimary: v("--primary", "#804898"),
+      colorBackground: v("--surface", dark ? "#1e1e1e" : "#ffffff"),
+      colorText: v("--foreground", dark ? "#fafafa" : "#18181b"),
       colorDanger: v("--danger", "#c2263b"),
       fontFamily: "Poppins, system-ui, sans-serif",
       borderRadius: "12px",

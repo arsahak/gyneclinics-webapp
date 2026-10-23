@@ -1,4 +1,5 @@
 import "server-only";
+import { cache } from "react";
 import { api } from "@/lib/api";
 import { ARTICLE_CATEGORIES, coverFor, isArticleCategory } from "@/lib/learn";
 import { getStoryArticle, getStoryArticles } from "@/lib/services/stories";
@@ -33,7 +34,7 @@ function toArticle(item: BackendArticle): Article {
     category,
     format: item.format,
     readMinutes: item.readTimeMinutes ?? 1,
-    author: item.authorName || "GyneClinics Editorial Team",
+    author: item.authorName || "GyneX Editorial Team",
     authorRole: item.authorRole ?? "",
     publishedAt: item.publishedAt ?? new Date().toISOString(),
     cover: coverFor(category, item.slug),
@@ -69,12 +70,13 @@ async function getContentArticles(): Promise<Article[]> {
 }
 
 /** One published article (or approved story, "community-<id>") with its full text, or undefined. */
-export async function getArticle(slug: string): Promise<Article | undefined> {
+async function fetchArticle(slug: string): Promise<Article | undefined> {
   if (!/^[a-z0-9-]{1,100}$/i.test(slug)) return undefined;
   if (slug.startsWith("community-")) return getStoryArticle(slug);
   const result = await api<BackendArticle>(`/content/feed/${slug}`);
   return result.ok && result.data ? toArticle(result.data) : undefined;
 }
+export const getArticle = cache(fetchArticle);
 
 export async function getCategories(): Promise<ArticleCategory[]> {
   return ARTICLE_CATEGORIES;

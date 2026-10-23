@@ -4,6 +4,11 @@ import { PortalData } from "@/component/shared/portal-data";
 import { AppShell, AppShellSkeleton } from "@/component/layout/app-shell";
 import { getMyConsultations } from "@/lib/services/consultations";
 import { requireAppAccess } from "@/lib/session";
+import type { Metadata } from "next";
+import { PRIVATE_ROBOTS } from "@/lib/seo";
+
+// Signed-in pages stay out of search results.
+export const metadata: Metadata = { robots: PRIVATE_ROBOTS };
 
 // Reads the session, so it can't be part of the static shell.
 export const instant = false;

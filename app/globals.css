@@ -3,35 +3,36 @@
 /* Dark mode follows the data-theme attribute set on <html> (light is the default). */
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
-/* A calm, cool palette: mineral teal, softened plum, rose and deep slate ink. */
+/* GyneX brand, same as the mobile app: purple #804898 (main) and teal #207898,
+   on neutral greys. */
 :root,
 [data-theme="light"] {
   color-scheme: light;
-  --background: #f7fafb;
+  --background: #fafafa;
   --surface: #ffffff;
-  --surface-2: #f1f6f7;
-  --foreground: #12334b;
-  --muted-foreground: #607586;
-  --border: #dce7e9;
+  --surface-2: #f4f4f5;
+  --foreground: #18181b;
+  --muted-foreground: #71717a;
+  --border: #e4e4e7;
 
-  --primary: #2b7d85;
-  --primary-hover: #21666e;
+  --primary: #804898;
+  --primary-hover: #6c3c80;
   --primary-foreground: #ffffff;
-  --primary-soft: #e6f4f3;
+  --primary-soft: #f0e9f3;
 
-  --secondary: #765885;
+  --secondary: #207898;
   --secondary-foreground: #ffffff;
-  --secondary-soft: #f4eef7;
+  --secondary-soft: #e4eff3;
 
-  --accent: #cc619d;
+  --accent: #a0569f;
   --accent-foreground: #ffffff;
-  --accent-soft: #fbeef5;
+  --accent-soft: #f6ecf6;
 
   --gold: #af8d53;
   --gold-soft: #f7f1e6;
 
   /* Brand bar (landing navbar) — always paired with white text. */
-  --nav: #173f57;
+  --nav: #452752;
 
   --success: #15803d;
   --success-soft: #e9f8ee;
@@ -40,41 +41,41 @@
   --danger: #c2263b;
   --danger-soft: #fdecee;
 
-  /* Cycle phase colours */
-  --phase-period: #cc619d;
-  --phase-fertile: #3d9ca0;
-  --phase-ovulation: #765885;
-  --phase-predicted: #ebb6d1;
+  /* Cycle phase colours (as in the mobile app) */
+  --phase-period: #804898;
+  --phase-fertile: #63a0b7;
+  --phase-ovulation: #207898;
+  --phase-predicted: #dfd1e5;
 
-  --shadow-color: 25 66 84;
+  --shadow-color: 24 24 27;
 }
 
 [data-theme="dark"] {
   color-scheme: dark;
-  --background: #091722;
-  --surface: #10232e;
-  --surface-2: #18333d;
-  --foreground: #e7f0f2;
-  --muted-foreground: #9bb0b8;
-  --border: #29444e;
+  --background: #121212;
+  --surface: #1e1e1e;
+  --surface-2: #252525;
+  --foreground: #fafafa;
+  --muted-foreground: #a1a1aa;
+  --border: #2e2e2e;
 
-  --primary: #62bcc0;
-  --primary-hover: #83d0d2;
-  --primary-foreground: #04161a;
-  --primary-soft: #11343a;
+  --primary: #a67fb7;
+  --primary-hover: #c6add1;
+  --primary-foreground: #1a0f20;
+  --primary-soft: #2a1d30;
 
-  --secondary: #c9a7d0;
-  --secondary-foreground: #1e0d22;
-  --secondary-soft: #302238;
+  --secondary: #63a0b7;
+  --secondary-foreground: #09222b;
+  --secondary-soft: #16303a;
 
-  --accent: #ed8bbb;
-  --accent-foreground: #2a0718;
-  --accent-soft: #401d35;
+  --accent: #c99bd0;
+  --accent-foreground: #24142b;
+  --accent-soft: #33203a;
 
   --gold: #d4b26e;
   --gold-soft: #2c2412;
 
-  --nav: #123d4e;
+  --nav: #2a1833;
 
   --success: #4ade80;
   --success-soft: #0f2a1b;
@@ -83,10 +84,10 @@
   --danger: #f87171;
   --danger-soft: #331418;
 
-  --phase-period: #f07bbd;
-  --phase-fertile: #3fb3b9;
-  --phase-ovulation: #c79ad3;
-  --phase-predicted: #6b3557;
+  --phase-period: #a67fb7;
+  --phase-fertile: #4f93ab;
+  --phase-ovulation: #63a0b7;
+  --phase-predicted: #4a3354;
 
   --shadow-color: 0 0 0;
 }
@@ -258,6 +259,27 @@ select:focus-visible {
     transform: scale(2.2);
     opacity: 0;
   }
+}
+
+/* The GyneX figure dancing: sways from its feet, lifting as it passes upright
+   (same as the mobile app's login and splash). */
+@keyframes sway {
+  0%,
+  50%,
+  100% {
+    transform: rotate(0deg) translateY(-6px) scale(1.04);
+  }
+  25% {
+    transform: rotate(5deg);
+  }
+  75% {
+    transform: rotate(-5deg);
+  }
+}
+
+@utility animate-sway {
+  animation: sway 5.2s ease-in-out infinite;
+  transform-origin: bottom center;
 }
 
 @utility animate-float {

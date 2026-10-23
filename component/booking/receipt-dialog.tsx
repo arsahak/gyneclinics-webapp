@@ -35,7 +35,7 @@ export function ReceiptDialog({
   if (payment.paidAt) rows.push(["Paid on", format(new Date(payment.paidAt), "d MMM yyyy, HH:mm")]);
 
   return (
-    <Dialog open={open} onClose={onClose} title="Receipt" description="GyneClinics consultation receipt">
+    <Dialog open={open} onClose={onClose} title="Receipt" description="GyneX consultation receipt">
       <div className="space-y-5">
         <div className="flex items-center justify-between rounded-2xl bg-surface-2 p-4">
           <span className="flex items-center gap-2 text-sm text-muted-foreground">

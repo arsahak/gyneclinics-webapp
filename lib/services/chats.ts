@@ -1,4 +1,5 @@
 import "server-only";
+import { cache } from "react";
 import { api } from "@/lib/api";
 import { type BackendMessage, type ChatSummary, hueFor, toMessage } from "@/lib/chat";
 import type { Message, Role } from "@/lib/types";
@@ -71,7 +72,7 @@ export interface DoctorChatData {
 }
 
 /** Doctor: one of your chats, or undefined if it isn't yours. */
-export async function getDoctorChat(chatId: string): Promise<DoctorChatData | undefined> {
+async function fetchDoctorChat(chatId: string): Promise<DoctorChatData | undefined> {
   if (!/^[a-f\d]{24}$/i.test(chatId)) return undefined;
   const result = await api<{ chat: BackendChat; messages: BackendMessage[] }>(`/chats/${chatId}`);
   if (!result.ok || !result.data) return undefined;
@@ -82,3 +83,4 @@ export async function getDoctorChat(chatId: string): Promise<DoctorChatData | un
     messages: result.data.messages.map(toMessage),
   };
 }
+export const getDoctorChat = cache(fetchDoctorChat);

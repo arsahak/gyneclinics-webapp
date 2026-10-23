@@ -2,8 +2,13 @@ import type { Metadata } from "next";
 import { getMyDoctorProfile } from "@/app/actions/doctorAction";
 import { DoctorProfileView } from "@/component/doctor/doctor-profile";
 import { PageHeader } from "@/component/shared/page-header";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = { title: "Profile & settings" };
+export const metadata: Metadata = pageMetadata({
+  title: "Profile & settings",
+  description: "Your public profile, registration, fee and account settings.",
+  path: "/doctor/profile",
+});
 
 // The layout checks the session on the server, so this page is rendered per request.
 export const instant = false;

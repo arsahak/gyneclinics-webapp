@@ -3,8 +3,12 @@ import { Suspense } from "react";
 import { ConsentForm } from "@/component/auth/consent-form";
 import { Skeleton } from "@/component/ui/skeleton";
 import { requireConsentStep } from "@/lib/session";
+import { PRIVATE_ROBOTS, pageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = { title: "Consent & disclaimer" };
+export const metadata: Metadata = {
+  ...pageMetadata({ title: "Consent & disclaimer", description: "Review and accept GyneX's health data consent and medical disclaimer to continue.", path: "/consent" }),
+  robots: PRIVATE_ROBOTS,
+};
 
 // Reads the session, so it can't be part of the static shell.
 export const instant = false;

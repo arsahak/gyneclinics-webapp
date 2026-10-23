@@ -2,8 +2,13 @@ import type { Metadata } from "next";
 import { AvailabilityEditor } from "@/component/doctor/availability-editor";
 import { PageHeader } from "@/component/shared/page-header";
 import { getMyDoctor } from "@/lib/services/doctors";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = { title: "Availability" };
+export const metadata: Metadata = pageMetadata({
+  title: "Availability",
+  description: "Set your weekly hours, slot length and days off for patient bookings.",
+  path: "/doctor/availability",
+});
 
 // The layout checks the session on the server, so this page is rendered per request.
 export const instant = false;

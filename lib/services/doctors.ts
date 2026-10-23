@@ -1,4 +1,5 @@
 import "server-only";
+import { cache } from "react";
 import { api } from "@/lib/api";
 import { hueFor } from "@/lib/chat";
 import type { DoctorSchedule } from "@/lib/availability";
@@ -84,11 +85,12 @@ export async function getDoctors(): Promise<Doctor[]> {
 }
 
 /** One approved, active doctor, or undefined if not found (or not approved / blocked). */
-export async function getDoctor(id: string): Promise<Doctor | undefined> {
+async function fetchDoctor(id: string): Promise<Doctor | undefined> {
   if (!/^[a-f\d]{24}$/i.test(id)) return undefined;
   const result = await api<BackendDoctor>(`/doctors/directory/${id}`);
   return result.ok && result.data ? toDoctor(result.data) : undefined;
 }
+export const getDoctor = cache(fetchDoctor);
 
 /** The signed-in patient's own review of a doctor (shown even while it waits for a check). */
 export interface MyReview {

@@ -1,78 +1,39 @@
-import { BellRing } from "lucide-react";
+import Image from "next/image";
 import { Logo } from "@/component/shared/logo";
 import { ThemeToggle } from "@/component/shared/theme-toggle";
 import { APP_NAME } from "@/lib/brand";
-import { cn } from "@/lib/utils";
 
-const STRIP = Array.from({ length: 14 }, (_, i) => i + 8);
-
-function stripDay(d: number) {
-  if (d <= 12) return "bg-[#dc329b] text-white";
-  if (d === 22) return "bg-[#834d8b] text-white";
-  if (d >= 17) return "bg-[#68e2dd]/20 text-[#a7f0ec]";
-  return "bg-white/10 text-white/60";
-}
-
-/** Decorative brand panel shown beside the sign-in and onboarding forms on large screens. */
+/**
+ * Brand panel beside the sign-in and onboarding forms on large screens. Same
+ * look as the mobile app's login: brand gradient, soft circles and the
+ * dancing GyneX figure.
+ */
 function BrandPanel() {
   return (
-    <aside className="relative hidden overflow-hidden bg-gradient-to-br from-[#217580] via-[#174f57] to-[#0a2342] p-12 text-white lg:flex lg:flex-col lg:justify-between xl:p-14">
-      {/* Texture and glows */}
-      <div
-        aria-hidden
-        className="absolute inset-0 [background-image:radial-gradient(rgb(255_255_255/0.12)_1px,transparent_1px)] [background-size:22px_22px] [mask-image:linear-gradient(to_bottom,black,transparent_85%)]"
-      />
-      <div aria-hidden className="absolute -right-24 -bottom-32 size-[420px] rounded-full bg-[#dc329b]/30 blur-[110px]" />
-      <div aria-hidden className="absolute -top-24 -left-24 size-80 rounded-full bg-[#68e2dd]/20 blur-[100px]" />
+    <aside className="relative hidden overflow-hidden bg-gradient-to-br from-[#a67fb7] via-[#804898] to-[#207898] p-12 text-white lg:flex lg:flex-col lg:items-center lg:justify-center xl:p-14">
+      {/* Soft circles */}
+      <div aria-hidden className="absolute -top-32 -right-28 size-[440px] rounded-full bg-white/[0.13]" />
+      <div aria-hidden className="absolute -bottom-24 -left-36 size-[380px] rounded-full bg-white/[0.08]" />
 
-      <div className="relative">
-        <Logo tone="inverse" />
-      </div>
-
-      <div className="relative max-w-md">
-        <h2 className="text-4xl leading-tight font-semibold tracking-tight xl:text-[2.75rem]">
-          Your health story,
+      <div className="relative flex max-w-md flex-col items-center text-center">
+        <Image
+          src="/assets/logo/gynexapp-icon.png"
+          alt=""
+          width={601}
+          height={887}
+          sizes="120px"
+          priority
+          className="animate-sway h-36 w-auto brightness-0 invert"
+        />
+        <h2 className="mt-8 text-4xl leading-tight font-bold tracking-tight xl:text-[2.75rem]">
+          Women&apos;s health,
           <br />
-          <span className="text-[#f6b3d9]">in your hands.</span>
+          in your pocket.
         </h2>
-        <p className="mt-4 text-white/70">
-          Track your cycle, understand your body and talk privately with a specialist whenever you need.
-        </p>
-
-        {/* Product preview */}
-        <div className="relative mt-12">
-          <div className="animate-pop-in rounded-3xl border border-white/15 bg-white/10 p-5 shadow-[0_30px_60px_-20px_rgb(0_0_0/0.45)] backdrop-blur-md">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-white/60">My cycle</p>
-                <p className="font-semibold">Cycle day 13</p>
-              </div>
-              <span className="rounded-full bg-[#68e2dd]/20 px-3 py-1 text-xs font-medium text-[#a7f0ec]">Fertile window</span>
-            </div>
-            <div className="mt-4 flex justify-between gap-1">
-              {STRIP.map((d) => (
-                <span
-                  key={d}
-                  className={cn(
-                    "flex aspect-square w-full max-w-7 items-center justify-center rounded-full text-[10px] font-medium",
-                    stripDay(d),
-                    d === 20 && "border-2 border-dotted border-white",
-                  )}
-                >
-                  {d}
-                </span>
-              ))}
-            </div>
-            <div className="mt-4 flex items-center gap-2 text-xs text-white/75">
-              <BellRing className="size-3.5 text-[#f6d38f]" /> Next period in 16 days
-            </div>
-          </div>
-        </div>
-
-
+        <p className="mt-4 text-white/85">Track your cycle and talk to verified doctors.</p>
       </div>
 
-      <p className="relative text-xs text-white/50">{APP_NAME} gives guidance, not a medical diagnosis.</p>
+      <p className="absolute bottom-10 text-xs text-white/60">{APP_NAME} gives guidance, not a medical diagnosis.</p>
     </aside>
   );
 }
@@ -84,7 +45,7 @@ export default function AuthLayout({ children }: LayoutProps<"/">) {
 
       <div className="flex flex-col">
         <header className="flex h-16 items-center justify-between px-4 sm:px-8">
-          <Logo className="lg:invisible" />
+          <Logo />
           <ThemeToggle />
         </header>
         <main className="flex flex-1 items-center justify-center px-4 py-10 sm:px-8 lg:pb-20">

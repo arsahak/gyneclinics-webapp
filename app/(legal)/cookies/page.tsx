@@ -2,8 +2,13 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { LegalDoc, type LegalSection } from "@/component/landing/legal-doc";
 import { APP_NAME, SUPPORT_EMAIL } from "@/lib/brand";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = { title: "Cookie Policy" };
+export const metadata: Metadata = pageMetadata({
+  title: "Cookie Policy",
+  description: "The cookies GyneX uses, why we use them and how you can manage your choices.",
+  path: "/cookies",
+});
 
 const COOKIE_TYPES = [
   {

@@ -118,8 +118,8 @@ function LearnPreview() {
 
 function HelpPreview() {
   const doctors = [
-    { initials: "AH", name: "Dr. Amelia Hart", role: "Consultant Gynaecologist", rating: "4.9", gradient: "from-[#217580] to-[#834d8b]" },
-    { initials: "NR", name: "Dr. Nadia Rahman", role: "Fertility Specialist", rating: "4.8", gradient: "from-[#834d8b] to-[#dc329b]" },
+    { initials: "AH", name: "Dr. Amelia Hart", role: "Consultant Gynaecologist", rating: "4.9", gradient: "from-[#207898] to-[#804898]" },
+    { initials: "NR", name: "Dr. Nadia Rahman", role: "Fertility Specialist", rating: "4.8", gradient: "from-[#804898] to-[#a67fb7]" },
   ];
   return (
     <div className="grid gap-4 md:grid-cols-[1fr_0.9fr]">

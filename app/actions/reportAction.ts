@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { API_URL, getAccessToken } from "@/auth";
 
-/** Reports a doctor to the GyneClinics team (POST /reports). */
+/** Reports a doctor to the GyneX team (POST /reports). */
 export async function reportDoctorAction(input: { doctorId: string; reason: string; details: string }): Promise<{ error?: string; message?: string }> {
   const token = await getAccessToken();
   if (!token) redirect("/login");

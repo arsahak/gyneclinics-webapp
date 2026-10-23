@@ -6,8 +6,13 @@ import { EmptyState } from "@/component/shared/empty-state";
 import { PageHeader } from "@/component/shared/page-header";
 import { Card, CardBody } from "@/component/ui/card";
 import { getDoctorReviews, getMyDoctor } from "@/lib/services/doctors";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = { title: "Reviews" };
+export const metadata: Metadata = pageMetadata({
+  title: "Reviews",
+  description: "What patients say about their consultations with you.",
+  path: "/doctor/reviews",
+});
 
 // The layout checks the session on the server, so this page is rendered per request.
 export const instant = false;

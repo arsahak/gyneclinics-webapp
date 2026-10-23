@@ -4,8 +4,17 @@ import { BookingFlow } from "@/component/booking/booking-flow";
 import { PageHeader } from "@/component/shared/page-header";
 import { messagingFor } from "@/lib/consultation";
 import { getBookedSlots, getDoctor } from "@/lib/services/doctors";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = { title: "Book a consultation" };
+export async function generateMetadata({ params }: PageProps<"/patient/doctors/[id]/book">): Promise<Metadata> {
+  const doctor = await getDoctor((await params).id);
+  if (!doctor) return { title: "Book a consultation" };
+  return pageMetadata({
+    title: `Book ${doctor.name}`,
+    description: `Book a private chat consultation with ${doctor.name}, ${doctor.title}. Choose a time and pay securely.`,
+    path: `/patient/doctors/${doctor.id}/book`,
+  });
+}
 
 // The layout checks the session on the server, so this page is rendered per request.
 export const instant = false;

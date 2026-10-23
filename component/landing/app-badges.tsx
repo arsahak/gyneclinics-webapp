@@ -13,7 +13,7 @@ function StoreBadge({ href, icon, top, bottom }: { href: string; icon: string; t
       href={href}
       target={href === "#" ? undefined : "_blank"}
       rel="noopener noreferrer"
-      className="group inline-flex h-14 shrink-0 items-center gap-3 rounded-2xl whitespace-nowrap bg-[#12384d] px-5 text-white shadow-[var(--shadow-soft)] ring-1 ring-white/10 transition-all hover:-translate-y-0.5 hover:shadow-[var(--shadow-lift)] dark:bg-white dark:text-[#12384d]"
+      className="group inline-flex h-14 shrink-0 items-center gap-3 rounded-2xl whitespace-nowrap bg-[#18181b] px-5 text-white shadow-[var(--shadow-soft)] ring-1 ring-white/10 transition-all hover:-translate-y-0.5 hover:shadow-[var(--shadow-lift)] dark:bg-white dark:text-[#18181b]"
     >
       <svg viewBox="0 0 24 24" className="size-7 shrink-0 fill-current" aria-hidden>
         <path d={icon} />

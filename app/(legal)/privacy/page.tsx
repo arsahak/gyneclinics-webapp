@@ -2,8 +2,13 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { LegalDoc, type LegalSection } from "@/component/landing/legal-doc";
 import { APP_NAME, COMPANY_NAME, SUPPORT_EMAIL } from "@/lib/brand";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = { title: "Privacy Policy" };
+export const metadata: Metadata = pageMetadata({
+  title: "Privacy Policy",
+  description: "How GyneX collects, uses and protects your health data, and the rights you have over your information.",
+  path: "/privacy",
+});
 
 const sections: LegalSection[] = [
   {

@@ -40,7 +40,7 @@ export function NotificationInbox({ initialItems, initialUnread }: { initialItem
   };
 
   if (items.length === 0) {
-    return <EmptyState icon={Bell} title="No notifications yet" description="Booking updates, replies from the team and news from GyneClinics show up here." />;
+    return <EmptyState icon={Bell} title="No notifications yet" description="Booking updates, replies from the team and news from GyneX show up here." />;
   }
 
   return (

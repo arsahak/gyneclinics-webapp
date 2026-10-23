@@ -94,10 +94,10 @@ export default function Landing() {
               <div className="mt-8 flex items-center justify-center gap-3 lg:justify-start">
                 <div className="flex -space-x-2">
                   {[
-                    ["AH", "from-[#2b7d85] to-[#765885]"],
-                    ["NR", "from-[#765885] to-[#cc619d]"],
-                    ["SC", "from-[#21666e] to-[#2b7d85]"],
-                    ["PM", "from-[#cc619d] to-[#af8d53]"],
+                    ["AH", "from-[#804898] to-[#207898]"],
+                    ["NR", "from-[#207898] to-[#a67fb7]"],
+                    ["SC", "from-[#6c3c80] to-[#804898]"],
+                    ["PM", "from-[#a67fb7] to-[#af8d53]"],
                   ].map(([initials, gradient]) => (
                     <span
                       key={initials}
@@ -118,7 +118,7 @@ export default function Landing() {
               <div className="mt-8 flex items-center justify-center gap-5 border-t border-border/70 pt-6 lg:justify-start">
                 {/* QR is for desktop visitors — on a phone, tapping a badge is enough */}
                 <div className="hidden shrink-0 rounded-2xl border border-border bg-white p-2 shadow-(--shadow-soft) sm:block">
-                  <AppQr size={80} color="#0a2342" />
+                  <AppQr size={80} color="#24142b" />
                 </div>
                 <div className="text-center lg:text-left">
                   <p className="mb-2.5 text-xs font-medium text-muted-foreground">
@@ -247,7 +247,7 @@ export default function Landing() {
         {/* Call to action */}
         <section className="bg-surface py-14 lg:py-20">
           <Container>
-            <div className="relative overflow-hidden rounded-4xl bg-gradient-to-br from-nav via-[#1d5f69] to-[#5e5476] px-6 py-14 text-center text-white shadow-[0_28px_64px_-32px_rgb(23_63_87/0.7)] sm:px-12 lg:py-16">
+            <div className="relative overflow-hidden rounded-4xl bg-gradient-to-br from-nav via-[#6c3c80] to-[#207898] px-6 py-14 text-center text-white shadow-[0_28px_64px_-32px_rgb(54_30_64/0.7)] sm:px-12 lg:py-16">
               <div aria-hidden className="pointer-events-none absolute -top-24 -right-24 size-72 rounded-full bg-white/10 blur-2xl" />
               <div aria-hidden className="pointer-events-none absolute -bottom-24 -left-24 size-72 rounded-full bg-accent/25 blur-3xl" />
               <h2 className="relative text-3xl font-semibold tracking-tight sm:text-4xl">Start understanding your cycle today</h2>
