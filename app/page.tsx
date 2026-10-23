@@ -63,12 +63,13 @@ export default function Landing() {
                 Women&apos;s health, made simple
               </span>
               <TypingTitle
-                className="mt-6 text-[2.15rem] leading-[1.12] font-semibold tracking-tight text-foreground sm:text-5xl lg:text-[2.6rem] xl:text-5xl"
+                // Always two lines: each line stays whole and the size follows the screen width.
+                className="mt-6 text-[clamp(1.5rem,6.4vw,2.6rem)] leading-[1.15] font-semibold tracking-tight text-foreground lg:text-[clamp(2.1rem,2.75vw,2.75rem)]"
                 lines={[
-                  { text: "Understand your cycle." },
+                  { text: "Empowering and Redefining", className: "whitespace-nowrap" },
                   {
-                    text: "Talk to a specialist.",
-                    className: "bg-gradient-to-r from-secondary to-accent bg-clip-text text-transparent",
+                    text: "Women’s Health Care.",
+                    className: "whitespace-nowrap bg-gradient-to-r from-secondary to-accent bg-clip-text text-transparent",
                   },
                 ]}
               />

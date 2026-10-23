@@ -5,12 +5,11 @@ import { APP_NAME, COMPANY_NAME } from "@/lib/brand";
 // per-page title, description, canonical link and social card text.
 // The share image is app/opengraph-image.png.
 
-/** The public web address. Set NEXT_PUBLIC_SITE_URL; on Vercel it falls back to the production domain. */
-export const SITE_URL =
-  process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ||
-  (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : "http://localhost:3000");
+/** The public web address (share image, canonical links, sitemap). NEXT_PUBLIC_SITE_URL can override it. */
+export const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") || "https://app.gyneclinics.com";
 
-export const SITE_TITLE = `${APP_NAME} — Women's health app: cycle tracking & private gynaecologist chat`;
+/** The company's main title, used for the home page and as the default title. */
+export const SITE_TITLE = `${APP_NAME} — Empowering and Redefining Women’s Health Care`;
 
 export const SITE_DESCRIPTION =
   "Track your periods and fertile window, read trusted women's health guidance and chat privately with verified gynaecologists — on web, iPhone and Android.";
