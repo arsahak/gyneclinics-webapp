@@ -13,6 +13,12 @@ export default auth((req) => {
   const pendingSignup = req.auth?.pendingSignup ?? false;
   const go = (path: string) => NextResponse.redirect(new URL(path, req.nextUrl));
 
+  // Server Actions (forms and buttons) check the session themselves and
+  // redirect in a way the page understands. Redirecting them here sends back
+  // an HTML page instead, which shows "An unexpected response was received
+  // from the server" (e.g. pressing Sign out after the session expired).
+  if (req.method === "POST" && req.headers.has("next-action")) return NextResponse.next();
+
   const area = pathname.startsWith("/patient") ? "patient" : pathname.startsWith("/doctor") ? "doctor" : null;
   const needsAccount = area !== null || pathname.startsWith("/onboarding") || pathname === "/consent";
 
