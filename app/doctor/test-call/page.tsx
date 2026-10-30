@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
+import { joinTestCallAction } from "@/app/actions/videoAction";
 import { PageHeader } from "@/component/shared/page-header";
-import { TestVideoCall } from "@/component/video/test-video-call";
+import { VideoCall } from "@/component/video/video-call";
 import { pageMetadata } from "@/lib/seo";
 
 export const metadata: Metadata = pageMetadata({
-  title: "Test call",
+  title: "Camera check",
   description: "Check your camera, microphone and connection before a video consultation.",
   path: "/doctor/test-call",
 });
@@ -16,10 +17,17 @@ export default function DoctorTestCallPage() {
   return (
     <>
       <PageHeader
-        title="Test video call"
-        description="Try a video call between a doctor and a patient. Up to 30 minutes."
+        title="Camera and microphone check"
+        description="A private check before your video consultations. Only you are in this call."
       />
-      <TestVideoCall role="doctor" />
+      <VideoCall
+        role="doctor"
+        kind="check"
+        join={joinTestCallAction}
+        title="Check your camera and mic"
+        intro="See yourself as your patients will, and speak to watch the microphone meter move. Nobody else can join."
+        joinLabel="Start check"
+      />
     </>
   );
 }

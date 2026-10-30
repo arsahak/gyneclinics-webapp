@@ -1,7 +1,7 @@
 "use client";
 
 import { differenceInCalendarDays, format, formatDistanceStrict } from "date-fns";
-import { CalendarCheck, CalendarClock, Clock, MessageCircle, ReceiptText, Zap } from "lucide-react";
+import { CalendarCheck, CalendarClock, Clock, MessageCircle, ReceiptText, Video, Zap } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { EmptyState } from "@/component/shared/empty-state";
@@ -10,7 +10,7 @@ import { Badge } from "@/component/ui/badge";
 import { Button, ButtonLink } from "@/component/ui/button";
 import { Card } from "@/component/ui/card";
 import { Tabs } from "@/component/ui/tabs";
-import { consultationDoctor, type ConsultationDoctor, type ConsultationTimeline, STATE_LABEL, timeline } from "@/lib/consultation";
+import { canVideoCall, consultationDoctor, type ConsultationDoctor, type ConsultationTimeline, STATE_LABEL, timeline } from "@/lib/consultation";
 import { useNow } from "@/lib/hooks";
 import { formatMoney } from "@/lib/locale/regions";
 import { useConsultations } from "@/lib/store/consultations";
@@ -180,6 +180,11 @@ function ConsultationCard({ row, now, onReceipt }: { row: Row; now: Date; onRece
       </dl>
 
       <div className="mt-4 flex flex-wrap gap-2 border-t border-border pt-4">
+        {canVideoCall(t, now) && (
+          <ButtonLink href={`/patient/consultations/${encodeURIComponent(c.id)}/call`} size="sm">
+            <Video /> Video call
+          </ButtonLink>
+        )}
         {doctor.listed ? (
           <ButtonLink href={`/patient/messages/${c.doctorId}`} size="sm" variant={ended || t.state === "upcoming" ? "outline" : "primary"}>
             <MessageCircle /> {ended ? "View chat" : t.state === "upcoming" ? "Chat details" : "Open chat"}

@@ -3,16 +3,25 @@
 import { getAccessToken } from "@/auth";
 import { api, errorText } from "@/lib/api";
 
-export interface TestCallTicket {
+export interface CallTicket {
   token: string;
   roomName: string;
   maxMinutes: number;
 }
 
-/** A Twilio Video token for the shared 30-minute test room (doctor or patient). */
-export async function joinTestCallAction(): Promise<{ ticket?: TestCallTicket; error?: string }> {
+async function ticketFrom(path: string): Promise<{ ticket?: CallTicket; error?: string }> {
   if (!(await getAccessToken())) return { error: "Please sign in again." };
-  const result = await api<TestCallTicket>("/video/test-call", { method: "POST" });
+  const result = await api<CallTicket>(path, { method: "POST" });
   if (!result.ok || !result.data) return { error: errorText(result) };
   return { ticket: { token: result.data.token, roomName: result.data.roomName, maxMinutes: result.data.maxMinutes } };
+}
+
+/** A Twilio Video token for your own private room, to check camera and microphone. */
+export async function joinTestCallAction() {
+  return ticketFrom("/video/test-call");
+}
+
+/** A Twilio Video token for one consultation's call (its patient or doctor only). */
+export async function joinConsultationCallAction(reference: string) {
+  return ticketFrom(`/video/consultations/${encodeURIComponent(reference)}`);
 }

@@ -38,7 +38,7 @@ const NAV: Record<Role, NavItem[]> = {
     { href: "/patient/consultations", label: "Consultations", icon: CalendarCheck },
     { href: "/patient/messages", label: "Messages", icon: MessagesSquare },
     { href: "/patient/notifications", label: "Notifications", icon: Bell },
-    { href: "/patient/test-call", label: "Test call", icon: Video },
+    { href: "/patient/test-call", label: "Camera check", icon: Video },
     { href: "/patient/profile", label: "Profile", icon: UserRound, mobile: true },
   ],
   doctor: [
@@ -47,7 +47,7 @@ const NAV: Record<Role, NavItem[]> = {
     { href: "/doctor/messages", label: "Messages", icon: MessagesSquare, mobile: true },
     { href: "/doctor/notifications", label: "Notifications", icon: Bell },
     { href: "/doctor/earnings", label: "Earnings", icon: Wallet },
-    { href: "/doctor/test-call", label: "Test call", icon: Video },
+    { href: "/doctor/test-call", label: "Camera check", icon: Video },
     { href: "/doctor/reviews", label: "Reviews", icon: Star, mobile: true },
     { href: "/doctor/profile", label: "Profile", icon: UserRound, mobile: true },
   ],

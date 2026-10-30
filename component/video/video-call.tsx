@@ -2,14 +2,16 @@
 
 import { Loader2, Mic, MicOff, PhoneOff, Timer, Video as VideoIcon, VideoOff } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { LocalTrack, RemoteParticipant, RemoteTrack, Room } from "twilio-video";
-import { joinTestCallAction } from "@/app/actions/videoAction";
+import type { LocalAudioTrack, LocalTrack, RemoteParticipant, RemoteTrack, Room } from "twilio-video";
+import type { CallTicket } from "@/app/actions/videoAction";
 import { Button } from "@/component/ui/button";
 import { Card } from "@/component/ui/card";
 import { cn } from "@/lib/utils";
 
-// A doctor and a patient meet in one shared Twilio Video room. Twilio ends
-// each person's call after `maxMinutes` (set on the backend).
+// A Twilio Video call, two ways:
+//   - "check": a private room with only you, to see your camera and test your mic;
+//   - "consultation": you and the other person on one consultation.
+// Twilio ends each person's call after the ticket's `maxMinutes` (set on the backend).
 
 type Phase = "idle" | "joining" | "connected" | "ended";
 
@@ -29,7 +31,7 @@ function errorMessage(error: unknown) {
   if (name === "NotFoundError") return "No camera or microphone found on this device.";
   if (name === "NotSupportedError" || name === "TypeError") return "This browser can't make video calls. Try Chrome, Edge or Safari.";
   if (name === "NotReadableError") return "Your camera or microphone is in use by another app.";
-  if (code === 53105) return "Two people are already in the test call. Please try again later.";
+  if (code === 53105) return "This call is full. Please try again in a moment.";
   return message || "Couldn't join the call. Please try again.";
 }
 
@@ -55,7 +57,46 @@ async function deviceTracks(): Promise<{ tracks: LocalTrack[]; problem: string |
   return { tracks: [], problem };
 }
 
-export function TestVideoCall({ role }: { role: "doctor" | "patient" }) {
+/** How loud the microphone is (0–1), so you can see it working in the check. */
+function useMicLevel(track: LocalAudioTrack | null) {
+  const [level, setLevel] = useState(0);
+  useEffect(() => {
+    if (!track) return;
+    const context = new AudioContext();
+    const analyser = context.createAnalyser();
+    analyser.fftSize = 256;
+    context.createMediaStreamSource(new MediaStream([track.mediaStreamTrack])).connect(analyser);
+    const samples = new Uint8Array(analyser.frequencyBinCount);
+    let frame = 0;
+    const tick = () => {
+      analyser.getByteTimeDomainData(samples);
+      let peak = 0;
+      for (const s of samples) peak = Math.max(peak, Math.abs(s - 128));
+      setLevel(Math.min(1, peak / 64));
+      frame = requestAnimationFrame(tick);
+    };
+    tick();
+    return () => {
+      cancelAnimationFrame(frame);
+      void context.close();
+      setLevel(0);
+    };
+  }, [track]);
+  return level;
+}
+
+export interface VideoCallProps {
+  role: "doctor" | "patient";
+  kind: "check" | "consultation";
+  /** Asks the backend for a ticket to the room. */
+  join: () => Promise<{ ticket?: CallTicket; error?: string }>;
+  /** Shown before joining. */
+  title: string;
+  intro: string;
+  joinLabel: string;
+}
+
+export function VideoCall({ role, kind, join: getTicket, title, intro, joinLabel }: VideoCallProps) {
   const [phase, setPhase] = useState<Phase>("idle");
   const [error, setError] = useState<string | null>(null);
   const [endNote, setEndNote] = useState<string | null>(null);
@@ -67,11 +108,14 @@ export function TestVideoCall({ role }: { role: "doctor" | "patient" }) {
   const [hasCam, setHasCam] = useState(true);
   const [deviceNote, setDeviceNote] = useState<string | null>(null);
   const [secondsLeft, setSecondsLeft] = useState(0);
+  const [micTrack, setMicTrack] = useState<LocalAudioTrack | null>(null);
 
   const roomRef = useRef<Room | null>(null);
   const localRef = useRef<HTMLDivElement>(null);
   const remoteRef = useRef<HTMLDivElement>(null);
   const otherSide = role === "doctor" ? "patient" : "doctor";
+  const check = kind === "check";
+  const micLevel = useMicLevel(check && micOn ? micTrack : null);
 
   const stopLocal = (room: Room) =>
     room.localParticipant.tracks.forEach((pub) => {
@@ -88,6 +132,7 @@ export function TestVideoCall({ role }: { role: "doctor" | "patient" }) {
       room.disconnect();
     }
     setRemote(null);
+    setMicTrack(null);
     setEndNote(note ?? "You left the call.");
     setPhase("ended");
   }, []);
@@ -137,7 +182,7 @@ export function TestVideoCall({ role }: { role: "doctor" | "patient" }) {
     setPhase("joining");
     let tracks: LocalTrack[] = [];
     try {
-      const { ticket, error: ticketError } = await joinTestCallAction();
+      const { ticket, error: ticketError } = await getTicket();
       if (!ticket) throw new Error(ticketError ?? "Couldn't join the call.");
 
       const devices = await deviceTracks();
@@ -148,14 +193,18 @@ export function TestVideoCall({ role }: { role: "doctor" | "patient" }) {
       setHasCam(cam);
       setMicOn(mic);
       setCamOn(cam);
+      setMicTrack((tracks.find((t) => t.kind === "audio") as LocalAudioTrack | undefined) ?? null);
+      const missing = !mic && !cam ? "Camera and microphone" : !cam ? "Camera" : !mic ? "Microphone" : null;
       setDeviceNote(
-        mic && cam
+        !missing
           ? null
-          : !mic && !cam
-            ? `Camera and microphone ${devices.problem ?? "not found"}. You can see and hear the ${otherSide}, but they can't see or hear you.`
-            : !cam
-              ? `Camera ${devices.problem ?? "not found"}. The ${otherSide} can hear you but not see you.`
-              : `Microphone ${devices.problem ?? "not found"}. The ${otherSide} can see you but not hear you.`,
+          : check
+            ? `${missing} ${devices.problem ?? "not found"}. Check it's connected and not used by another app.`
+            : !mic && !cam
+              ? `Camera and microphone ${devices.problem ?? "not found"}. You can see and hear the ${otherSide}, but they can't see or hear you.`
+              : !cam
+                ? `Camera ${devices.problem ?? "not found"}. The ${otherSide} can hear you but not see you.`
+                : `Microphone ${devices.problem ?? "not found"}. The ${otherSide} can see you but not hear you.`,
       );
 
       const { connect } = await import("twilio-video");
@@ -164,7 +213,7 @@ export function TestVideoCall({ role }: { role: "doctor" | "patient" }) {
       setSecondsLeft(ticket.maxMinutes * 60);
       setPhase("connected");
 
-      // Own camera, small in the corner.
+      // Own camera: big in the check, small in the corner on a call.
       room.localParticipant.videoTracks.forEach((pub) => {
         const el = pub.track.attach();
         el.className = "size-full object-cover -scale-x-100";
@@ -184,11 +233,21 @@ export function TestVideoCall({ role }: { role: "doctor" | "patient" }) {
         roomRef.current = null;
         stopLocal(room);
         setRemote(null);
-        setEndNote(err?.code === 53216 ? "The 30 minutes are up. The call has ended." : "The call was disconnected.");
+        setMicTrack(null);
+        setEndNote(
+          err?.code === 53216
+            ? check
+              ? "The check has ended. Start it again any time."
+              : `The ${ticket.maxMinutes} minutes for this call are up. Join again to keep talking.`
+            : err?.code === 53205
+              ? "You joined this call somewhere else, so it ended here."
+              : "The call was disconnected.",
+        );
         setPhase("ended");
       });
     } catch (err) {
       tracks.forEach((track) => "stop" in track && track.stop());
+      setMicTrack(null);
       setError(errorMessage(err));
       setPhase("idle");
     }
@@ -213,14 +272,8 @@ export function TestVideoCall({ role }: { role: "doctor" | "patient" }) {
           <span className="mx-auto inline-flex size-16 items-center justify-center rounded-full bg-primary-soft text-primary">
             <VideoIcon className="size-8" />
           </span>
-          <h2 className="mt-5 font-serif text-2xl font-semibold text-foreground">
-            {phase === "ended" ? "Call ended" : "Test video call"}
-          </h2>
-          <p className="mt-2 text-muted-foreground">
-            {phase === "ended"
-              ? endNote
-              : `Join, then ask the ${otherSide} to open their Test call page and join too. You can talk for up to 30 minutes.`}
-          </p>
+          <h2 className="mt-5 font-serif text-2xl font-semibold text-foreground">{phase === "ended" ? "Call ended" : title}</h2>
+          <p className="mt-2 text-muted-foreground">{phase === "ended" ? endNote : intro}</p>
           {error && (
             <p role="alert" className="mt-4 rounded-2xl bg-danger-soft p-3 text-sm text-danger">
               {error}
@@ -233,7 +286,7 @@ export function TestVideoCall({ role }: { role: "doctor" | "patient" }) {
               </>
             ) : (
               <>
-                <VideoIcon /> {phase === "ended" ? "Join again" : "Join test call"}
+                <VideoIcon /> {phase === "ended" ? "Join again" : joinLabel}
               </>
             )}
           </Button>
@@ -244,13 +297,13 @@ export function TestVideoCall({ role }: { role: "doctor" | "patient" }) {
       {/* Kept on the page (hidden until connected) so video can attach as soon as the call starts. */}
       <div className={cn("space-y-4", !connected && "hidden")}>
         <div className="relative aspect-video overflow-hidden rounded-3xl bg-[#0b1a24] shadow-[var(--shadow-lift)]">
-          {/* The other person */}
-          <div ref={remoteRef} className="absolute inset-0" />
-          {!remote && (
+          {/* The other person (a consultation call) */}
+          {!check && <div ref={remoteRef} className="absolute inset-0" />}
+          {!check && !remote && (
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-center text-white/80">
               <Loader2 className="size-8 animate-spin" />
               <p className="font-medium">Waiting for the {otherSide} to join…</p>
-              <p className="text-sm text-white/60">Ask them to open Test call and press Join.</p>
+              <p className="text-sm text-white/60">They join from this consultation in their account.</p>
             </div>
           )}
           {other && (
@@ -258,25 +311,47 @@ export function TestVideoCall({ role }: { role: "doctor" | "patient" }) {
               {other.name} · {other.role === "doctor" ? "Doctor" : "Patient"}
             </span>
           )}
+          {check && (
+            <span className="absolute top-4 left-4 z-10 rounded-full bg-black/50 px-3 py-1 text-sm font-medium text-white backdrop-blur">
+              Only you · this is how you&apos;ll look on a call
+            </span>
+          )}
           <span
             className={cn(
-              "absolute top-4 right-4 inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-sm font-semibold tabular-nums backdrop-blur",
+              "absolute top-4 right-4 z-10 inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-sm font-semibold tabular-nums backdrop-blur",
               secondsLeft <= 300 ? "bg-danger text-white" : "bg-black/50 text-white",
             )}
           >
             <Timer className="size-4" /> {mmss(secondsLeft)}
           </span>
 
-          {/* Me */}
-          <div className="absolute right-4 bottom-4 aspect-video w-36 overflow-hidden rounded-2xl border-2 border-white/70 bg-black shadow-lg sm:w-56">
+          {/* Me: the whole frame in the check, a corner on a call */}
+          <div
+            className={cn(
+              "overflow-hidden bg-black",
+              check
+                ? "absolute inset-0"
+                : "absolute right-4 bottom-4 aspect-video w-36 rounded-2xl border-2 border-white/70 shadow-lg sm:w-56",
+            )}
+          >
             <div ref={localRef} className={cn("size-full", !camOn && "invisible")} />
             {!camOn && (
               <div className="absolute inset-0 flex items-center justify-center text-xs text-white/70">
                 {hasCam ? "Camera off" : "No camera"}
               </div>
             )}
-            <span className="absolute bottom-1.5 left-2 text-[11px] font-medium text-white/90 drop-shadow">You</span>
+            {!check && <span className="absolute bottom-1.5 left-2 text-[11px] font-medium text-white/90 drop-shadow">You</span>}
           </div>
+
+          {check && hasMic && (
+            <div className="absolute bottom-4 left-4 z-10 flex items-center gap-2 rounded-full bg-black/50 px-3 py-1.5 text-sm text-white backdrop-blur">
+              {micOn ? <Mic className="size-4" /> : <MicOff className="size-4" />}
+              <span className="h-2 w-28 overflow-hidden rounded-full bg-white/25" aria-label="Microphone level">
+                <span className="block h-full rounded-full bg-success transition-[width] duration-75" style={{ width: `${Math.round(micLevel * 100)}%` }} />
+              </span>
+              <span className="text-xs text-white/80">{micOn ? "Speak to test" : "Muted"}</span>
+            </div>
+          )}
         </div>
 
         {deviceNote && (
@@ -292,8 +367,8 @@ export function TestVideoCall({ role }: { role: "doctor" | "patient" }) {
           <Button variant={camOn ? "outline" : "danger"} size="lg" onClick={toggleCam} aria-pressed={!camOn} disabled={!hasCam}>
             {camOn ? <VideoIcon /> : <VideoOff />} {camOn ? "Camera off" : "Camera on"}
           </Button>
-          <Button variant="destructive" size="lg" onClick={() => leave()}>
-            <PhoneOff /> Leave
+          <Button variant="destructive" size="lg" onClick={() => leave(check ? "Check finished." : undefined)}>
+            <PhoneOff /> {check ? "End check" : "Leave"}
           </Button>
         </div>
       </div>

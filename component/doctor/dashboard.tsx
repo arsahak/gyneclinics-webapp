@@ -1,7 +1,7 @@
 "use client";
 
 import { format, isSameMonth, parseISO } from "date-fns";
-import { ArrowRight, BadgeCheck, CalendarClock, Clock, MessagesSquare, Star, TrendingUp, Wallet } from "lucide-react";
+import { ArrowRight, BadgeCheck, CalendarClock, Clock, MessagesSquare, Star, TrendingUp, Video, Wallet } from "lucide-react";
 import Link from "next/link";
 import { useState, useTransition } from "react";
 import { Stars } from "@/component/doctors/rating";
@@ -12,7 +12,8 @@ import { Card, CardBody, CardHeader } from "@/component/ui/card";
 import { Switch } from "@/component/ui/field";
 import { formatMoney } from "@/lib/locale/regions";
 import { usePricing } from "@/lib/store/pricing";
-import { STATE_LABEL, timeline } from "@/lib/consultation";
+import { ButtonLink } from "@/component/ui/button";
+import { canVideoCall, STATE_LABEL, timeline } from "@/lib/consultation";
 import { useConsultations } from "@/lib/store/consultations";
 import type { ChatSummary } from "@/lib/chat";
 import type { Review } from "@/lib/types";
@@ -189,7 +190,13 @@ export function DoctorDashboard({
                           {c.mode === "instant" ? "Instant chat" : format(t.startsAt, "HH:mm")} · {c.id}
                         </p>
                       </div>
-                      <Badge tone={STATE_LABEL[t.state].tone}>{STATE_LABEL[t.state].label}</Badge>
+                      {canVideoCall(t, now) ? (
+                        <ButtonLink href={`/doctor/consultations/${encodeURIComponent(c.id)}/call`} size="sm">
+                          <Video /> Video call
+                        </ButtonLink>
+                      ) : (
+                        <Badge tone={STATE_LABEL[t.state].tone}>{STATE_LABEL[t.state].label}</Badge>
+                      )}
                     </li>
                   ))}
                 </ul>
