@@ -1,5 +1,5 @@
 // App name shown in the logo and page titles. Change it here to rename the app everywhere.
-export const APP_NAME = "GyneX";
+export const APP_NAME = "Gyne";
 // The parent clinic that runs the app (in-person care, gyneclinics.com).
 export const COMPANY_NAME = "GyneClinics";
 

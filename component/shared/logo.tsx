@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 
 type Tone = "default" | "inverse";
 
-/** The GyneX logo. "inverse" shows it in white, for dark backgrounds. */
+/** The Gyne logo. "inverse" shows it in white, for dark backgrounds. */
 export function Logo({ href = "/", tone = "default", className }: { href?: string; tone?: Tone; className?: string }) {
   return (
     <Link href={href} aria-label={`${APP_NAME} home`} className={cn("inline-flex items-center", className)}>

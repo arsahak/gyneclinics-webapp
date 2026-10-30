@@ -6,7 +6,7 @@ import { pageMetadata } from "@/lib/seo";
 
 export const metadata: Metadata = pageMetadata({
   title: "Community stories",
-  description: "Real experiences shared by GyneX members and checked by our team.",
+  description: "Real experiences shared by Gyne members and checked by our team.",
   path: "/patient/learn/share-story",
 });
 

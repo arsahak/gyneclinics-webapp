@@ -6,7 +6,7 @@ import { APP_NAME, COMPANY_NAME } from "@/lib/brand";
 // The share image is app/opengraph-image.png.
 
 /** The public web address (share image, canonical links, sitemap). NEXT_PUBLIC_SITE_URL can override it. */
-export const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") || "https://app.gyneclinics.com";
+export const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") || "https://www.gyne.app";
 
 /** The company's main title, used for the home page and as the default title. */
 export const SITE_TITLE = `${APP_NAME} — Empowering and Redefining Women’s Health Care`;
@@ -47,7 +47,7 @@ export function clip(text: string, max = 155) {
 }
 
 /**
- * Metadata for one page: title (the layout adds " · GyneX"), description,
+ * Metadata for one page: title (the layout adds " · Gyne"), description,
  * canonical URL and matching Open Graph / X card text.
  */
 export function pageMetadata({
@@ -61,7 +61,7 @@ export function pageMetadata({
   description: string;
   /** Route path, e.g. "/privacy". */
   path: string;
-  /** Use the title as is, without " · GyneX". */
+  /** Use the title as is, without " · Gyne". */
   absoluteTitle?: boolean;
   type?: "website" | "article" | "profile";
 }): Metadata {

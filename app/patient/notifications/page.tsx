@@ -6,7 +6,7 @@ import { pageMetadata } from "@/lib/seo";
 
 export const metadata: Metadata = pageMetadata({
   title: "Notifications",
-  description: "Updates about your consultations, your account and news from GyneX.",
+  description: "Updates about your consultations, your account and news from Gyne.",
   path: "/patient/notifications",
 });
 
@@ -17,7 +17,7 @@ export default async function PatientNotificationsPage() {
   const inbox = await getMyNotifications();
   return (
     <>
-      <PageHeader title="Notifications" description="Updates about your account and news from GyneX." />
+      <PageHeader title="Notifications" description="Updates about your account and news from Gyne." />
       {inbox ? (
         <NotificationInbox initialItems={inbox.items} initialUnread={inbox.unread} />
       ) : (

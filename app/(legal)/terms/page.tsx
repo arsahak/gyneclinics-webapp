@@ -7,7 +7,7 @@ import { pageMetadata } from "@/lib/seo";
 
 export const metadata: Metadata = pageMetadata({
   title: "Terms & Conditions",
-  description: "The terms for using GyneX, including consultations, payments, refunds and your responsibilities.",
+  description: "The terms for using Gyne, including consultations, payments, refunds and your responsibilities.",
   path: "/terms",
 });
 

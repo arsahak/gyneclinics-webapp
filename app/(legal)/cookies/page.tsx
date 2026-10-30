@@ -6,7 +6,7 @@ import { pageMetadata } from "@/lib/seo";
 
 export const metadata: Metadata = pageMetadata({
   title: "Cookie Policy",
-  description: "The cookies GyneX uses, why we use them and how you can manage your choices.",
+  description: "The cookies Gyne uses, why we use them and how you can manage your choices.",
   path: "/cookies",
 });
 

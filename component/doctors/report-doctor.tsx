@@ -9,7 +9,7 @@ import { Field, Select, Textarea } from "@/component/ui/field";
 
 const REASONS = [
   { value: "medical_concern", label: "Unsafe or wrong medical advice" },
-  { value: "off_platform", label: "Asked me to talk or pay outside GyneX" },
+  { value: "off_platform", label: "Asked me to talk or pay outside Gyne" },
   { value: "no_reply", label: "Didn't reply to me" },
   { value: "behaviour", label: "Rude or inappropriate" },
   { value: "payment", label: "Problem with a payment" },
@@ -17,7 +17,7 @@ const REASONS = [
   { value: "other", label: "Something else" },
 ];
 
-/** "Report a problem" link and dialog on a doctor's profile. Goes to the GyneX team. */
+/** "Report a problem" link and dialog on a doctor's profile. Goes to the Gyne team. */
 export function ReportDoctor({ doctorId, doctorName }: { doctorId: string; doctorName: string }) {
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState("");
@@ -57,7 +57,7 @@ export function ReportDoctor({ doctorId, doctorName }: { doctorId: string; docto
         open={open}
         onClose={() => setOpen(false)}
         title={sent ? "Report sent" : `Report ${doctorName}`}
-        description={sent ? undefined : "Only the GyneX team sees this. The doctor isn't told who reported them."}
+        description={sent ? undefined : "Only the Gyne team sees this. The doctor isn't told who reported them."}
       >
         {sent ? (
           <div className="space-y-5">

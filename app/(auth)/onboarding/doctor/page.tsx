@@ -6,7 +6,7 @@ import { requireOnboarding } from "@/lib/session";
 import { PRIVATE_ROBOTS, pageMetadata } from "@/lib/seo";
 
 export const metadata: Metadata = {
-  ...pageMetadata({ title: "Set up your doctor profile", description: "Add your qualifications, registration and fee to start consulting patients on GyneX.", path: "/onboarding/doctor" }),
+  ...pageMetadata({ title: "Set up your doctor profile", description: "Add your qualifications, registration and fee to start consulting patients on Gyne.", path: "/onboarding/doctor" }),
   robots: PRIVATE_ROBOTS,
 };
 

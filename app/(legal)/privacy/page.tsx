@@ -6,7 +6,7 @@ import { pageMetadata } from "@/lib/seo";
 
 export const metadata: Metadata = pageMetadata({
   title: "Privacy Policy",
-  description: "How GyneX collects, uses and protects your health data, and the rights you have over your information.",
+  description: "How Gyne collects, uses and protects your health data, and the rights you have over your information.",
   path: "/privacy",
 });
 

@@ -4,7 +4,7 @@ import { pageMetadata } from "@/lib/seo";
 
 export const metadata: Metadata = pageMetadata({
   title: "Verification pending",
-  description: "Your doctor profile is being checked by the GyneX team.",
+  description: "Your doctor profile is being checked by the Gyne team.",
   path: "/doctor/pending",
 });
 

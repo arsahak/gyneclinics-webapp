@@ -7,7 +7,7 @@ import { requireOnboarding } from "@/lib/session";
 import { PRIVATE_ROBOTS, pageMetadata } from "@/lib/seo";
 
 export const metadata: Metadata = {
-  ...pageMetadata({ title: "Set up your profile", description: "Tell us a little about your cycle so GyneX can personalise your period and fertility predictions.", path: "/onboarding/patient" }),
+  ...pageMetadata({ title: "Set up your profile", description: "Tell us a little about your cycle so Gyne can personalise your period and fertility predictions.", path: "/onboarding/patient" }),
   robots: PRIVATE_ROBOTS,
 };
 

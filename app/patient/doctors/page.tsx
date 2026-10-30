@@ -21,7 +21,7 @@ export default async function DoctorsPage() {
       <PageHeader
         eyebrow="Get help"
         title="Find a specialist"
-        description="Every doctor is a verified gynaecology specialist. Chat privately inside GyneX."
+        description="Every doctor is a verified gynaecology specialist. Chat privately inside Gyne."
         action={<FeeRegionChip />}
       />
       <DoctorBrowser doctors={doctors} />

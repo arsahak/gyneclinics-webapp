@@ -6,7 +6,7 @@ import { APP_NAME } from "@/lib/brand";
 /**
  * Brand panel beside the sign-in and onboarding forms on large screens. Same
  * look as the mobile app's login: brand gradient, soft circles and the
- * dancing GyneX figure.
+ * dancing Gyne figure.
  */
 function BrandPanel() {
   return (

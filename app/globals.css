@@ -3,7 +3,7 @@
 /* Dark mode follows the data-theme attribute set on <html> (light is the default). */
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
-/* GyneX brand, same as the mobile app: purple #804898 (main) and teal #207898,
+/* Gyne brand, same as the mobile app: purple #804898 (main) and teal #207898,
    on neutral greys. */
 :root,
 [data-theme="light"] {
@@ -261,7 +261,7 @@ select:focus-visible {
   }
 }
 
-/* The GyneX figure dancing: sways from its feet, lifting as it passes upright
+/* The Gyne figure dancing: sways from its feet, lifting as it passes upright
    (same as the mobile app's login and splash). */
 @keyframes sway {
   0%,

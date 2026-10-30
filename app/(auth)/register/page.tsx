@@ -7,7 +7,7 @@ import { pageMetadata } from "@/lib/seo";
 
 export const metadata: Metadata = pageMetadata({
   title: "Create your account",
-  description: "Join GyneX free with your mobile number to track your cycle and talk privately with verified gynaecologists.",
+  description: "Join Gyne free with your mobile number to track your cycle and talk privately with verified gynaecologists.",
   path: "/register",
 });
 

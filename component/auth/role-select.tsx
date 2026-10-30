@@ -45,7 +45,7 @@ export function RoleSelect({ phone }: { phone: string }) {
       <StepHeader
         step={1}
         total={3}
-        title="How will you use GyneX?"
+        title="How will you use Gyne?"
         description={
           <>
             <span className="font-medium text-foreground">{phone}</span> is verified. Choose one to continue. This

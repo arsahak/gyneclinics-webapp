@@ -6,7 +6,7 @@ import { requireConsentStep } from "@/lib/session";
 import { PRIVATE_ROBOTS, pageMetadata } from "@/lib/seo";
 
 export const metadata: Metadata = {
-  ...pageMetadata({ title: "Consent & disclaimer", description: "Review and accept GyneX's health data consent and medical disclaimer to continue.", path: "/consent" }),
+  ...pageMetadata({ title: "Consent & disclaimer", description: "Review and accept Gyne's health data consent and medical disclaimer to continue.", path: "/consent" }),
   robots: PRIVATE_ROBOTS,
 };
 
